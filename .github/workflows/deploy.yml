@@ -1,0 +1,71 @@
+# Publica no servidor da empresa a cada push na main (ou manualmente em Actions → Deploy → Run workflow).
+# Só publica se a verificação de tipos e os testes passarem.
+#
+# Segredos necessários (Settings → Secrets and variables → Actions):
+#   SSH_HOST  endereço do servidor            SSH_USER  usuário do SSH
+#   SSH_KEY   chave privada do SSH            SSH_PORT  porta (opcional, padrão 22)
+#   APP_DIR   pasta do app no servidor        PM2_APP   nome do app no pm2
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      configured: ${{ steps.cfg.outputs.configured }}
+    steps:
+      - id: cfg
+        name: Conferir se os segredos do servidor existem
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          if [ -n "$SSH_HOST" ]; then echo "configured=true" >> "$GITHUB_OUTPUT";
+          else echo "::warning::Segredos do servidor não configurados: a publicação será pulada."; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Preparar SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Atualizar o servidor
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+          PM2_APP: ${{ secrets.PM2_APP }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "cd '$APP_DIR' && git pull --ff-only && PM2_APP='$PM2_APP' bash scripts/deploy.sh"
