@@ -58,6 +58,35 @@ TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres npm test   # inclu
 O `TEST_DATABASE_URL` precisa de um usuário que crie bancos: cada arquivo de teste cria e apaga
 um banco descartável.
 
+## Publicação automática
+
+```
+PC (Claude Code)  --push-->  GitHub (prestektelecom)  <--cron 2 min--  servidor
+ hook ao fim da tarefa        origin/<ramo>                            scripts/auto-update.sh
+```
+
+- **PC → GitHub:** quando o Claude Code termina uma tarefa neste projeto e há alterações, o hook
+  `Stop` ([.claude/hooks/auto-publish.mjs](.claude/hooks/auto-publish.mjs), ligado em
+  `.claude/settings.json`) faz o Claude rodar `npx tsc --noEmit` e `npm test`, commitar com uma
+  mensagem descritiva e enviar ao GitHub (`git pull --rebase` antes, nunca `--force`). Se um teste
+  falhar ou houver conflito, nada é enviado e o erro aparece na conversa. Edições feitas à mão no
+  editor não disparam nada: faça commit e push como de costume.
+- **GitHub → servidor:** só a `main` vai para a produção. O cron do servidor roda
+  `scripts/auto-update.sh` a cada 2 minutos; se houver commit novo, faz `git pull` e roda
+  `scripts/deploy.sh` (dependências, tipos, testes, `db:setup`, build, `pm2 restart`). Se algum
+  passo falhar, o app anterior continua no ar.
+- **Outro ramo:** para algo arriscado, trabalhe em outro ramo (`git switch -c meu-ramo`). O envio
+  vai para `origin/meu-ramo` e a produção não muda até juntar na `main`.
+- **Pausar:** crie o arquivo `.auto-publish-off` na raiz do projeto (fica fora do git). Apague-o
+  para voltar; as alterações acumuladas são publicadas ao fim da próxima tarefa.
+
+Conferir o servidor:
+
+```sh
+crontab -l          # deve ter a linha do scripts/auto-update.sh (veja o topo do arquivo)
+tail ~/deploy.log   # últimas publicações e erros
+```
+
 ## Migração a partir do Supabase (Lovable)
 
 O backup do Supabase (`pg_dump` em formato custom, ex. `database/gestao-e-auditoria-5s_261105.backup`)

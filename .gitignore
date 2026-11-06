@@ -37,3 +37,6 @@ dist-ssr
 !.env.example
 database/
 data/
+
+# Pausa da publicação automática (.claude/hooks/auto-publish.mjs)
+.auto-publish-off
