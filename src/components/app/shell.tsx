@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { can, ROLE_LABEL, type Permission } from "@/lib/permissions";
+import { can, ROLE_LABEL, type Permission, type Role } from "@/lib/permissions";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -16,35 +16,58 @@ import { NotificationBell } from "./notifications";
 import { Button } from "@/components/ui/button";
 import logoPrestek from "@/assets/logo-prestek.png";
 
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; perm: Permission; children?: { to: string; label: string; icon: typeof LayoutDashboard; perm?: Permission }[] };
+export type NavLeaf = { to: string; label: string; icon: typeof LayoutDashboard; perm: Permission };
+export type NavSection = { title?: string; items: NavLeaf[] };
 
-export const NAV: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
-  { to: "/auditorias", label: "Auditorias", icon: ClipboardCheck, perm: "audits.view" },
-  { to: "/plano-de-acao", label: "Plano de Ação", icon: ListTodo, perm: "actionPlans.view" },
-  { to: "/checklist", label: "Checklist 5S", icon: ListChecks, perm: "checklist.view" },
-  { to: "/qr-codes", label: "QR Codes", icon: QrCode, perm: "qrcodes.view" },
-  { to: "/unidades", label: "Unidades e Setores", icon: Building2, perm: "units.view" },
-  { to: "/usuarios", label: "Usuários e Auditores", icon: Users, perm: "people.view" },
-  { to: "/relatorios", label: "Relatórios", icon: FileBarChart, perm: "reports.view" },
+// Cada item declara a própria permissão; seções sem item visível somem.
+export const NAV: NavSection[] = [
+  { items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" }] },
   {
-    to: "/reunioes", label: "Reuniões", icon: CalendarDays, perm: "meetings.view",
-    children: [
-      { to: "/reunioes/atas", label: "Atas", icon: FileText },
-      { to: "/reunioes/plano-de-acao", label: "Plano de Ação", icon: ListTodo },
+    title: "Auditoria 5S",
+    items: [
+      { to: "/auditorias", label: "Auditorias", icon: ClipboardCheck, perm: "audits.view" },
+      { to: "/plano-de-acao", label: "Plano de Ação", icon: ListTodo, perm: "actionPlans.view" },
+      { to: "/relatorios", label: "Relatórios", icon: FileBarChart, perm: "reports.view" },
     ],
   },
   {
-    to: "/manutencao", label: "Manutenção", icon: Wrench, perm: "maintenance.view",
-    children: [
-      { to: "/manutencao/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/manutencao/notas", label: "Notas", icon: FileText },
-      { to: "/manutencao/qr-codes", label: "QR Codes", icon: QrCode, perm: "maintenance.qrcodes" },
-      { to: "/manutencao/gestao", label: "Gestão", icon: ClipboardCheck },
+    title: "Reuniões",
+    items: [
+      { to: "/reunioes/atas", label: "Atas", icon: CalendarDays, perm: "meetings.view" },
+      { to: "/reunioes/plano-de-acao", label: "Plano de Ação da reunião", icon: ListTodo, perm: "meetings.view" },
     ],
   },
-  { to: "/configuracoes", label: "Configurações", icon: Settings, perm: "settings.view" },
+  {
+    title: "Manutenção",
+    items: [
+      { to: "/manutencao/dashboard", label: "Painel", icon: LayoutDashboard, perm: "maintenance.view" },
+      { to: "/manutencao/notas", label: "Notas", icon: FileText, perm: "maintenance.view" },
+      { to: "/manutencao/qr-codes", label: "QR Codes de equipamentos", icon: QrCode, perm: "maintenance.qrcodes" },
+      { to: "/manutencao/gestao", label: "Gestão", icon: Wrench, perm: "maintenance.view" },
+    ],
+  },
+  {
+    title: "Cadastros",
+    items: [
+      { to: "/unidades", label: "Unidades e Setores", icon: Building2, perm: "units.view" },
+      { to: "/checklist", label: "Checklist 5S", icon: ListChecks, perm: "checklist.view" },
+      { to: "/qr-codes", label: "QR Codes dos setores", icon: QrCode, perm: "qrcodes.view" },
+    ],
+  },
+  {
+    title: "Administração",
+    items: [
+      { to: "/usuarios", label: "Usuários e Auditores", icon: Users, perm: "people.view" },
+      { to: "/configuracoes", label: "Configurações", icon: Settings, perm: "settings.view" },
+    ],
+  },
 ];
+
+export function visibleSections(role: Role | null | undefined): NavSection[] {
+  return NAV
+    .map((s) => ({ ...s, items: s.items.filter((i) => can(role, i.perm)) }))
+    .filter((s) => s.items.length > 0);
+}
 
 function Brand({ compact }: { compact?: boolean }) {
   return (
@@ -68,56 +91,37 @@ const linkCls = (active: boolean, compact?: boolean) => cn(
   active ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
 );
 
-function NavLinks({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
+export function NavLinks({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
   const { role } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
     <nav className="flex flex-col gap-0.5">
-      {NAV.filter((n) => can(role, n.perm)).map((n) => {
-        const active = path === n.to || path.startsWith(n.to + "/");
-        const Icon = n.icon;
-        if (n.children) {
-          const isOpen = open[n.to] ?? active;
-          if (compact) {
-            return n.children.filter((c) => !c.perm || can(role, c.perm)).map((c) => {
-              const CI = c.icon;
-              return (
-                <Link key={c.to} to={c.to} onClick={onNavigate} title={`${n.label} · ${c.label}`} className={linkCls(path.startsWith(c.to), true)}>
-                  <CI className="size-4 shrink-0" />
-                </Link>
-              );
-            });
-          }
-          return (
-            <div key={n.to}>
-              <button type="button" aria-expanded={isOpen} onClick={() => setOpen((o) => ({ ...o, [n.to]: !isOpen }))} className={cn(linkCls(false), "w-full", active && "font-medium")}>
+      {visibleSections(role).map((s, idx) => (
+        <div key={s.title ?? idx} role="group" aria-label={s.title} className="flex flex-col gap-0.5">
+          {s.title && (compact
+            ? <div aria-hidden="true" className="mx-2 my-1.5 border-t border-sidebar-border" />
+            : <p className="px-2 pb-1 pt-3 text-xs font-medium text-sidebar-foreground/60">{s.title}</p>)}
+          {s.items.map((n) => {
+            const active = path === n.to || path.startsWith(n.to + "/");
+            const Icon = n.icon;
+            const fullName = s.title ? `${s.title} · ${n.label}` : n.label;
+            return (
+              <Link
+                key={n.to}
+                to={n.to}
+                onClick={onNavigate}
+                title={compact ? fullName : undefined}
+                aria-label={compact ? fullName : undefined}
+                data-active={active || undefined}
+                className={linkCls(active, compact)}
+              >
                 <Icon className="size-4 shrink-0" />
-                <span className="flex-1 truncate text-left">{n.label}</span>
-                <ChevronDown className={cn("size-3.5 transition-transform", isOpen && "rotate-180")} />
-              </button>
-              {isOpen && (
-                <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
-                  {n.children.filter((c) => !c.perm || can(role, c.perm)).map((c) => {
-                    const CI = c.icon;
-                    return (
-                      <Link key={c.to} to={c.to} onClick={onNavigate} className={linkCls(path === c.to || path.startsWith(c.to + "/"))}>
-                        <CI className="size-4 shrink-0" /><span className="truncate">{c.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        }
-        return (
-          <Link key={n.to} to={n.to} onClick={onNavigate} title={compact ? n.label : undefined} className={linkCls(active, compact)}>
-            <Icon className="size-4 shrink-0" />
-            {!compact && <span className="truncate">{n.label}</span>}
-          </Link>
-        );
-      })}
+                {!compact && <span className="truncate">{n.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }
@@ -142,7 +146,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <Brand compact={collapsed} />
           <div className="flex-1 overflow-y-auto p-2">
-            {!collapsed && <p className="px-2 py-2 text-xs font-medium text-sidebar-foreground/60">Menu</p>}
             <NavLinks compact={collapsed} />
           </div>
           <div className="border-t border-sidebar-border p-2">
@@ -168,7 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SheetContent side="left" className="management-theme w-[272px] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground [&>button]:text-sidebar-foreground">
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Brand />
-            <div className="p-2"><p className="px-2 py-2 text-xs text-sidebar-foreground/60">Menu</p><NavLinks onNavigate={() => setMobileOpen(false)} /></div>
+            <div className="p-2"><NavLinks onNavigate={() => setMobileOpen(false)} /></div>
           </SheetContent>
         </Sheet>
 
