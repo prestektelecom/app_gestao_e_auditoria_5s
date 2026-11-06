@@ -39,7 +39,8 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-describe("hook de publicação automática", () => {
+// Cada teste cria repositórios git de verdade; no Windows isso passa de 5 s com a suíte toda rodando.
+describe("hook de publicação automática", { timeout: 30_000 }, () => {
   it("repositório limpo e sincronizado não bloqueia", () => {
     const work = setup();
     expect(checkPending(work).pending).toBe(false);

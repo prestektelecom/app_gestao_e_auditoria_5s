@@ -20,7 +20,7 @@ O teste de UI atual (`src/test/app-routing.test.tsx`) só confere o roteamento. 
 ## Decisions
 
 **1. Ícones dentro do campo por posicionamento, sem mexer no `Input`.**
-Cada campo fica em um wrapper `relative`, com o ícone `absolute` à esquerda (`pointer-events-none`, `aria-hidden`) e o `Input` com `pl-9`. O de senha leva também `pr-10` e um `<button type="button">` à direita, no mesmo padrão do reset. Os campos ganham altura `h-11` só nesta tela.
+Cada campo fica em um wrapper `relative`, com o ícone `absolute` à esquerda (`pointer-events-none`, `aria-hidden`) e o `Input` com `pl-9`. O de senha leva também `pr-10` e um `<button type="button">` à direita, no mesmo padrão do reset. Os campos e o botão ficam com altura `h-10` (40 px), e o cartão com `max-w-sm`, para a tela não ficar grande demais em notebook.
 *Alternativa:* adicionar slots de ícone ao `Input` compartilhado. Isso foi descartado porque espalha a mudança pelo app todo por causa de uma tela.
 
 **2. Componentes locais pequenos no próprio arquivo.**
