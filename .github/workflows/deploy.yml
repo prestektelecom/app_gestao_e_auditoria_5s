@@ -33,8 +33,8 @@ jobs:
         run: |
           if [ -n "$SSH_HOST" ]; then echo "configured=true" >> "$GITHUB_OUTPUT";
           else echo "::warning::Segredos do servidor não configurados: a publicação será pulada."; fi
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -57,7 +57,21 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          if ! ssh-keyscan -T 20 -p "$SSH_PORT" "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null || [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::Não consegui alcançar o servidor $SSH_HOST na porta $SSH_PORT. Confira o SSH_HOST (IP público), a porta e se o firewall libera o SSH vindo da internet."
+            exit 1
+          fi
+
+      - name: Testar o acesso SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+        run: |
+          if ! ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=20 "$SSH_USER@$SSH_HOST" true; then
+            echo "::error::O servidor respondeu, mas recusou o login de $SSH_USER com a chave. Confira o SSH_USER, o SSH_KEY (texto completo, do BEGIN ao END) e se a chave pública está em /home/$SSH_USER/.ssh/authorized_keys."
+            exit 1
+          fi
 
       - name: Atualizar o servidor
         env:
@@ -67,5 +81,5 @@ jobs:
           APP_DIR: ${{ secrets.APP_DIR }}
           PM2_APP: ${{ secrets.PM2_APP }}
         run: |
-          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" -o BatchMode=yes "$SSH_USER@$SSH_HOST" \
             "cd '$APP_DIR' && git pull --ff-only && PM2_APP='$PM2_APP' bash scripts/deploy.sh"
