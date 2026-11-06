@@ -46,7 +46,7 @@ npm run build
 npm start               # escuta em PORT (padrão 3000)
 ```
 
-Desenvolvimento: `npm run dev`.
+Desenvolvimento: `npm run dev`. Se o `.env` tiver `DEV_SSH_HOST`, ele abre antes o túnel SSH até o banco de dev e o fecha ao sair (`npm run dev:vite` sobe só o vite).
 
 ## Testes
 
