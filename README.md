@@ -73,8 +73,8 @@ PC (Claude Code)  --push-->  GitHub (prestektelecom)  <--cron 2 min--  servidor
   editor não disparam nada: faça commit e push como de costume.
 - **GitHub → servidor:** só a `main` vai para a produção. O cron do servidor roda
   `scripts/auto-update.sh` a cada 2 minutos; se houver commit novo, faz `git pull` e roda
-  `scripts/deploy.sh` (dependências, tipos, testes, `db:setup`, build, `pm2 restart`). Se algum
-  passo falhar, o app anterior continua no ar.
+  `scripts/deploy.sh` (dependências, tipos, testes, `db:setup`, build e reinício do serviço
+  `gestao5s` do systemd). Se algum passo falhar, o app anterior continua no ar.
 - **Outro ramo:** para algo arriscado, trabalhe em outro ramo (`git switch -c meu-ramo`). O envio
   vai para `origin/meu-ramo` e a produção não muda até juntar na `main`.
 - **Pausar:** crie o arquivo `.auto-publish-off` na raiz do projeto (fica fora do git). Apague-o
@@ -82,11 +82,26 @@ PC (Claude Code)  --push-->  GitHub (prestektelecom)  <--cron 2 min--  servidor
 - **Quando passa a valer:** o Claude Code relê o `.claude/settings.json`, então o hook costuma
   valer já na sessão aberta. Se não disparar, abra uma sessão nova.
 
+No servidor, o app é o serviço `gestao5s.service` do systemd. Ele roda como `antonio`, na pasta
+do projeto, com a configuração em `/etc/gestao5s.env`. Para o cron publicar sozinho, é preciso
+uma vez (com a senha do `sudo`):
+
+```sh
+# deixa o antonio reiniciar só este serviço sem senha
+echo 'antonio ALL=(root) NOPASSWD: /usr/bin/systemctl restart gestao5s, /usr/bin/systemctl restart gestao5s.service' \
+  | sudo tee /etc/sudoers.d/gestao5s-deploy && sudo chmod 440 /etc/sudoers.d/gestao5s-deploy && sudo visudo -c
+# deixa o antonio ler a configuração do serviço (o db:setup do deploy precisa do DATABASE_URL)
+sudo chown root:antonio /etc/gestao5s.env && sudo chmod 640 /etc/gestao5s.env
+# instala o cron (linha no topo do scripts/auto-update.sh)
+(crontab -l 2>/dev/null; echo '*/2 * * * * SYSTEMD_UNIT=gestao5s bash /home/antonio/app_gestao-e-auditoria-5s/scripts/auto-update.sh >> /home/antonio/deploy.log 2>&1') | crontab -
+```
+
 Conferir o servidor:
 
 ```sh
-crontab -l          # deve ter a linha do scripts/auto-update.sh (veja o topo do arquivo)
-tail ~/deploy.log   # últimas publicações e erros
+crontab -l                          # deve ter a linha do scripts/auto-update.sh
+tail ~/deploy.log                   # últimas publicações e erros
+systemctl status gestao5s --no-pager
 ```
 
 ## Migração a partir do Supabase (Lovable)
