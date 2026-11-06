@@ -41,6 +41,10 @@ function LoginPage() {
   }, [loading, session, navigate]);
 
   useEffect(() => {
+    document.getElementById(mode === "bootstrap" ? "name" : "email")?.focus();
+  }, [mode]);
+
+  useEffect(() => {
     hasAnyAdmin().then((v) => setHasAdmin(v !== false)).catch(() => setHasAdmin(true));
   }, []);
 
@@ -98,7 +102,7 @@ function LoginPage() {
           </div>
           <span className="font-display text-lg font-semibold text-brand-orange">Prestek 5S</span>
         </div>
-        <h2 className="rounded-md bg-muted px-4 py-2 text-center text-sm font-semibold">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">
           {mode === "login" ? "Entrar" : mode === "forgot" ? "Recuperar acesso" : "Criar primeiro administrador"}
         </h2>
         <form onSubmit={submit} className="mt-6 grid gap-4">

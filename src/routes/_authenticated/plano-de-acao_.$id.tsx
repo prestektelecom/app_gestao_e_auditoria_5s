@@ -110,7 +110,7 @@ function Page() {
               {p.origin_changed && answer && <span className="ml-2 font-normal text-muted-foreground">(atual: {answerLabel(answer.answer)})</span>}</dd></div>
             <div className="sm:col-span-2"><dt className="eyebrow">Observação do auditor</dt><dd className="mt-1 text-muted-foreground">{p.occurrence || "—"}</dd></div>
           </dl>
-          {photos.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{photos.map((u) => <img key={u} src={u} alt="Evidência" loading="lazy" onClick={() => setViewer(u)} className="size-20 cursor-pointer rounded-lg border border-border object-cover" />)}</div>}
+          {photos.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{photos.map((u) => <button key={u} type="button" aria-label="Ampliar foto" onClick={() => setViewer(u)} className="rounded-lg"><img src={u} alt="Evidência" loading="lazy" className="size-20 rounded-lg border border-border object-cover" /></button>)}</div>}
         </Panel>
 
         <Panel label="b" title="5W2H" aside={!editable && <span className="text-xs text-muted-foreground">Somente consulta</span>}>

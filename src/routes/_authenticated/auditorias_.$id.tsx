@@ -153,7 +153,7 @@ function Detail() {
                       {evs.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2 sm:pl-10">
                           {evs.map((e) => urls[e.storage_path]
-                            ? <img key={e.id} src={urls[e.storage_path]} alt="Evidência" onClick={() => setViewer(urls[e.storage_path]!)} className="size-20 cursor-pointer rounded-lg border border-border object-cover" />
+                            ? <button key={e.id} type="button" aria-label="Ampliar foto" onClick={() => setViewer(urls[e.storage_path]!)} className="rounded-lg"><img src={urls[e.storage_path]} alt="Evidência" className="size-20 rounded-lg border border-border object-cover" /></button>
                             : <div key={e.id} className="size-20 rounded-lg bg-muted" />)}
                         </div>
                       )}

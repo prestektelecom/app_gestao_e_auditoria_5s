@@ -299,7 +299,7 @@ function LocationBadge({ loc, onRetry }: { loc: string; onRetry: () => void }) {
     <div className="rounded-lg border border-tape/60 bg-tape/10 p-3 text-sm">
       <p>⚠ Localização não registrada. A auditoria poderá continuar.</p>
       <p className="mt-1 text-xs text-muted-foreground">{loc === "DENIED" ? "Permissão negada no navegador." : "Localização indisponível."}</p>
-      <button type="button" className="mt-2 text-xs text-primary underline" onClick={onRetry}>Tentar novamente</button>
+      <button type="button" className="mt-2 min-h-10 text-sm font-medium text-primary underline" onClick={onRetry}>Tentar novamente</button>
     </div>
   );
 }
@@ -456,7 +456,7 @@ function AuditRunner({
   if (step === "review") {
     return (
       <Shell sub={header}>
-        <button className="flex w-fit items-center gap-1 text-sm text-muted-foreground" onClick={() => setStep("checklist")}><ChevronLeft className="size-4" /> Voltar ao checklist</button>
+        <button type="button" className="flex min-h-10 w-fit items-center gap-1 text-sm text-muted-foreground" onClick={() => setStep("checklist")}><ChevronLeft className="size-4" /> Voltar ao checklist</button>
         <div className="panel grid gap-4 p-5">
           <p className="font-display text-lg font-semibold">Revisão da Auditoria</p>
           <p className="text-sm font-medium">{answeredCount}/{answers.length} perguntas respondidas</p>
@@ -512,7 +512,7 @@ function AuditRunner({
           const done = list.every((a) => a.answer);
           return (
             <button key={s.code} onClick={() => { setSense(s.code); topRef.current?.scrollIntoView(); }}
-              className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+              className={cn("min-h-10 shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition",
                 s.code === sense ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card/60",
                 done && s.code !== sense && "border-success/40 text-success")}>
               {i + 1}. {s.label} {done && "✓"}
@@ -528,9 +528,9 @@ function AuditRunner({
         return (
           <div key={a.id} id={`q-${a.id}`} className={cn("panel grid gap-3 p-4", need && "border-destructive/40")}>
             <p className="text-sm leading-relaxed"><span className="mr-1 font-mono text-xs text-muted-foreground">{String(a.order).padStart(2, "0")}.</span>{a.question}</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label={`Resposta da pergunta ${a.order}`}>
               {ANSWERS.map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setAnswer(a.id, opt.value)}
+                <button key={opt.value} type="button" aria-pressed={a.answer === opt.value} onClick={() => setAnswer(a.id, opt.value)}
                   className={cn("min-h-12 rounded-xl border px-2 py-2 text-sm font-medium transition",
                     a.answer === opt.value
                       ? opt.value === "COMPLIANT" ? "border-success bg-success text-success-foreground"
@@ -544,7 +544,7 @@ function AuditRunner({
             </div>
             {a.answer && (
               <>
-                <Textarea placeholder={need ? "Observação (obrigatória)" : "Observação (opcional)"} value={a.observation ?? ""} maxLength={2000}
+                <Textarea aria-label={need ? "Observação (obrigatória)" : "Observação (opcional)"} placeholder={need ? "Observação (obrigatória)" : "Observação (opcional)"} value={a.observation ?? ""} maxLength={2000}
                   className={cn(need && !a.observation?.trim() && "border-destructive")}
                   onChange={(e) => setObservation(a.id, e.target.value)} />
                 {a.answer !== "NOT_APPLICABLE" && (
@@ -552,7 +552,7 @@ function AuditRunner({
                     <div className="flex flex-wrap gap-2">
                       {evs.map((e) => (
                         <div key={e.id} className="relative size-20 overflow-hidden rounded-lg border border-border bg-muted">
-                          {urls[e.path] ? <img src={urls[e.path]} alt="Evidência" className="size-full object-cover" onClick={() => setViewer(urls[e.path]!)} />
+                          {urls[e.path] ? <button type="button" aria-label="Ampliar foto" className="size-full" onClick={() => setViewer(urls[e.path]!)}><img src={urls[e.path]} alt="Evidência" className="size-full object-cover" /></button>
                             : <Loader2 className="m-auto mt-7 size-4 animate-spin" />}
                           <button type="button" aria-label="Remover foto" onClick={() => setToRemove(e)}
                             className="absolute -right-1 -top-1 grid size-9 place-items-center"><span className="grid size-7 place-items-center rounded-full bg-foreground/80 text-background shadow"><X className="size-4" /></span></button>
@@ -573,14 +573,14 @@ function AuditRunner({
                     </div>
                     {pend.some((p) => p.error) && <p className="text-xs text-destructive">Falha ao enviar foto. Toque em "Tentar" para reenviar.</p>}
                     <div className="grid grid-cols-2 gap-2">
-                      <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card/70 text-sm">
+                      <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card/70 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
                         <Camera className="size-4" /> Câmera
-                        <input type="file" accept="image/*" capture="environment" className="hidden"
+                        <input type="file" accept="image/*" capture="environment" className="sr-only"
                           onChange={(e) => { addFiles(a.id, e.target.files, "CAMERA"); e.target.value = ""; }} />
                       </label>
-                      <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card/70 text-sm">
+                      <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card/70 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
                         <ImagePlus className="size-4" /> Galeria
-                        <input type="file" accept="image/*" multiple className="hidden"
+                        <input type="file" accept="image/*" multiple className="sr-only"
                           onChange={(e) => { addFiles(a.id, e.target.files, "GALLERY"); e.target.value = ""; }} />
                       </label>
                     </div>
@@ -593,12 +593,12 @@ function AuditRunner({
         );
       })}
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" disabled={idx <= 0} onClick={() => { setSense(sensesPresent[idx - 1]!.code); topRef.current?.scrollIntoView(); }}>Anterior</Button>
+        <Button variant="outline" className="h-12" disabled={idx <= 0} onClick={() => { setSense(sensesPresent[idx - 1]!.code); topRef.current?.scrollIntoView(); }}>Anterior</Button>
         {idx < sensesPresent.length - 1
-          ? <Button onClick={() => { setSense(sensesPresent[idx + 1]!.code); topRef.current?.scrollIntoView(); }}>Próximo senso</Button>
-          : <Button onClick={() => setStep("review")}>Revisar</Button>}
+          ? <Button className="h-12" onClick={() => { setSense(sensesPresent[idx + 1]!.code); topRef.current?.scrollIntoView(); }}>Próximo senso</Button>
+          : <Button className="h-12" onClick={() => setStep("review")}>Revisar</Button>}
       </div>
-      <Button variant="ghost" onClick={() => setStep("review")}>Ir para revisão</Button>
+      <Button variant="ghost" className="h-11" onClick={() => setStep("review")}>Ir para revisão</Button>
       <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
         <DialogContent className="max-w-3xl p-2"><DialogTitle className="sr-only">Foto</DialogTitle>{viewer && <img src={viewer} alt="Evidência" className="w-full rounded" />}</DialogContent>
       </Dialog>

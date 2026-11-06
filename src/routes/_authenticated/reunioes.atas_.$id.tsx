@@ -241,7 +241,7 @@ function Page() {
                   </Select>
                 </div>
                 <label className="flex items-center gap-2 text-sm"><Checkbox disabled={ro} checked={p.present} onCheckedChange={(c) => updP(i, { present: !!c })} /> Presente</label>
-                {manage && <Button size="icon" variant="ghost" onClick={() => setParts((l) => l.filter((_, j) => j !== i))} title="Remover"><Trash2 className="size-4 text-destructive" /></Button>}
+                {manage && <Button size="icon" variant="ghost" onClick={() => setParts((l) => l.filter((_, j) => j !== i))} title="Remover" aria-label="Remover participante"><Trash2 className="size-4 text-destructive" /></Button>}
               </div>
             ))}
           </div>

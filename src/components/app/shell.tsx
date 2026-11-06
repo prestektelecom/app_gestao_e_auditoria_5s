@@ -55,7 +55,7 @@ function Brand({ compact }: { compact?: boolean }) {
       {!compact && (
         <div className="min-w-0">
           <p className="font-display text-sm font-semibold leading-tight">Prestek</p>
-          <p className="truncate text-[10px] leading-tight text-sidebar-foreground/60">Gestão e Auditoria 5S</p>
+          <p className="truncate text-[11px] leading-tight text-sidebar-foreground/75">Gestão e Auditoria 5S</p>
         </div>
       )}
     </div>
@@ -91,7 +91,7 @@ function NavLinks({ compact, onNavigate }: { compact?: boolean; onNavigate?: () 
           }
           return (
             <div key={n.to}>
-              <button type="button" onClick={() => setOpen((o) => ({ ...o, [n.to]: !isOpen }))} className={cn(linkCls(false), "w-full", active && "font-medium")}>
+              <button type="button" aria-expanded={isOpen} onClick={() => setOpen((o) => ({ ...o, [n.to]: !isOpen }))} className={cn(linkCls(false), "w-full", active && "font-medium")}>
                 <Icon className="size-4 shrink-0" />
                 <span className="flex-1 truncate text-left">{n.label}</span>
                 <ChevronDown className={cn("size-3.5 transition-transform", isOpen && "rotate-180")} />

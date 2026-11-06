@@ -24,15 +24,15 @@ export function NoteRowActions({ note, manage, onOpen }: { note: MaintNote; mana
   const qc = useQueryClient();
   return (
     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-      <Button size="icon" variant="ghost" title="Ver" onClick={() => onOpen(note, false)}><Eye className="size-4" /></Button>
+      <Button size="icon" variant="ghost" title="Ver" aria-label="Ver" onClick={() => onOpen(note, false)}><Eye className="size-4" /></Button>
       {manage && <>
-        <Button size="icon" variant="ghost" title="Editar" onClick={() => onOpen(note, true)}><Pencil className="size-4" /></Button>
+        <Button size="icon" variant="ghost" title="Editar" aria-label="Editar" onClick={() => onOpen(note, true)}><Pencil className="size-4" /></Button>
         <ConfirmAction destructive title={`Excluir a nota ${note.note_number}?`} description="A nota e suas imagens serão apagadas definitivamente." confirmLabel="Excluir"
           onConfirm={async () => {
             try { await deleteMaintNote(note); toast.success("Nota excluída."); await qc.invalidateQueries({ queryKey: ["maint-notes"] }); }
             catch (e) { toast.error(friendlyError(e as Error)); }
           }}
-          trigger={(open) => <Button size="icon" variant="ghost" className="text-destructive" title="Excluir" onClick={open}><Trash2 className="size-4" /></Button>} />
+          trigger={(open) => <Button size="icon" variant="ghost" className="text-destructive" title="Excluir" aria-label="Excluir" onClick={open}><Trash2 className="size-4" /></Button>} />
       </>}
     </div>
   );

@@ -119,10 +119,10 @@ function Page() {
                   <TableCell className={overdue(a) ? "font-medium text-destructive" : ""}>{formatDate(a.when_date)}{overdue(a) && " · atrasada"}</TableCell>
                   <TableCell><span className="rounded-md bg-muted px-2 py-0.5 text-xs">{ACTION_STATUS[a.status] ?? a.status}</span></TableCell>
                   <TableCell className="whitespace-nowrap text-right">
-                    <Button size="icon" variant="ghost" title={manage ? "Editar" : "Ver"} onClick={() => setEdit({ ...a })}><Pencil className="size-4" /></Button>
+                    <Button size="icon" variant="ghost" title={manage ? "Editar" : "Ver"} aria-label={manage ? "Editar" : "Ver"} onClick={() => setEdit({ ...a })}><Pencil className="size-4" /></Button>
                     {manage && (
                       <ConfirmAction destructive title="Excluir ação?" confirmLabel="Excluir" description="A ação será removida do plano e da ata."
-                        trigger={(open) => <Button size="icon" variant="ghost" title="Excluir" onClick={open}><Trash2 className="size-4 text-destructive" /></Button>}
+                        trigger={(open) => <Button size="icon" variant="ghost" title="Excluir" aria-label="Excluir" onClick={open}><Trash2 className="size-4 text-destructive" /></Button>}
                         onConfirm={async () => {
                           try { await deleteMeetingAction({ data: { id: a.id } }); }
                           catch (error) { toast.error(friendlyError(error)); return; }

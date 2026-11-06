@@ -66,11 +66,11 @@ function Page() {
                   <TableCell className="text-center">{m.actions}</TableCell>
                   <TableCell><span className="rounded-md bg-muted px-2 py-0.5 text-xs">{MEETING_STATUS[m.status] ?? m.status}</span></TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    <Button asChild size="icon" variant="ghost" title="Abrir"><Link to="/reunioes/atas/$id" params={{ id: m.id }}><Pencil className="size-4" /></Link></Button>
+                    <Button asChild size="icon" variant="ghost" title="Abrir" aria-label="Abrir"><Link to="/reunioes/atas/$id" params={{ id: m.id }}><Pencil className="size-4" /></Link></Button>
                     {manage && (
                       <ConfirmAction destructive title="Excluir ata?" confirmLabel="Excluir"
                         description={`A ata ${m.meeting_number} e todas as ações do seu plano de ação serão excluídas.`}
-                        trigger={(open) => <Button size="icon" variant="ghost" title="Excluir" onClick={open}><Trash2 className="size-4 text-destructive" /></Button>}
+                        trigger={(open) => <Button size="icon" variant="ghost" title="Excluir" aria-label="Excluir" onClick={open}><Trash2 className="size-4 text-destructive" /></Button>}
                         onConfirm={async () => {
                           try { await deleteMeeting({ data: { id: m.id } }); }
                           catch (error) { toast.error(friendlyError(error)); return; }

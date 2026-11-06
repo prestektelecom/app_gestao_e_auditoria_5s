@@ -50,14 +50,15 @@ export function Delta({ value, className }: { value: number | null; className?: 
 }
 
 export function Kpi({ label, value, hint, tone, onClick }: { label: string; value: ReactNode; hint?: ReactNode; tone?: "danger" | "warn"; onClick?: () => void }) {
-  return (
-    <button type="button" onClick={onClick} disabled={!onClick}
-      className={cn("panel rise flex flex-col items-start gap-1 p-4 text-left transition enabled:hover:-translate-y-0.5", tone === "danger" && "ring-1 ring-destructive/30")}>
+  const cls = cn("panel rise flex flex-col items-start gap-1 p-4 text-left transition", onClick && "hover:-translate-y-0.5", tone === "danger" && "ring-1 ring-destructive/30");
+  const body = (
+    <>
       <span className="eyebrow">{label}</span>
       <span className={cn("font-display text-2xl font-bold tabular-nums", tone === "danger" && "text-destructive")}>{value}</span>
       {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-    </button>
+    </>
   );
+  return onClick ? <button type="button" onClick={onClick} className={cls}>{body}</button> : <div className={cls}>{body}</div>;
 }
 
 export function Bar({ value, className }: { value: number | null; className?: string }) {
