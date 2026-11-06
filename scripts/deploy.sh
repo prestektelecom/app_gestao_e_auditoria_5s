@@ -9,8 +9,8 @@
 #   PM2_APP=gestao5s bash scripts/deploy.sh
 #
 # No systemd, o reinício usa `sudo -n systemctl restart`, então o usuário precisa de uma regra
-# no sudoers que permita só esse comando sem senha, num arquivo lido por último
-# (/etc/sudoers.d/zz-gestao5s-deploy; veja o README, "Publicação automática").
+# no sudoers que permita só esse comando sem senha, depois de qualquer outra regra do usuário
+# (veja o README, "Publicação automática").
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

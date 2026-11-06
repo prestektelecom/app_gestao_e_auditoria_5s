@@ -87,10 +87,14 @@ do projeto, com a configuração em `/etc/gestao5s.env`. Para o cron publicar so
 uma vez (com a senha do `sudo`):
 
 ```sh
-# deixa o antonio reiniciar só este serviço sem senha. O nome começa com "zz-" para ser lido por
-# último: no sudoers vale a última regra que combina, e outra regra do antonio (com senha) a anularia.
-echo 'antonio ALL=(root) NOPASSWD: /bin/systemctl restart gestao5s, /bin/systemctl restart gestao5s.service, /usr/bin/systemctl restart gestao5s, /usr/bin/systemctl restart gestao5s.service' \
-  | sudo tee /etc/sudoers.d/zz-gestao5s-deploy && sudo chmod 440 /etc/sudoers.d/zz-gestao5s-deploy && sudo /usr/sbin/visudo -c
+# deixa o antonio reiniciar só este serviço sem senha. No sudoers vale a última regra que combina,
+# e neste servidor o /etc/sudoers tem "antonio ALL=(ALL:ALL) ALL" (com senha) DEPOIS do
+# includedir: uma regra em /etc/sudoers.d/ perde para ela. Por isso a linha vai no fim do
+# /etc/sudoers, com cópia de segurança e volta automática se a sintaxe falhar (rode como root).
+cp /etc/sudoers /root/sudoers.bak
+echo 'antonio ALL=(root) NOPASSWD: /bin/systemctl restart gestao5s, /bin/systemctl restart gestao5s.service, /usr/bin/systemctl restart gestao5s, /usr/bin/systemctl restart gestao5s.service' >> /etc/sudoers
+/usr/sbin/visudo -c || cp /root/sudoers.bak /etc/sudoers
+su - antonio -c 'sudo -n systemctl restart gestao5s' && echo SUDO_OK
 # deixa o antonio ler a configuração do serviço (o db:setup do deploy precisa do DATABASE_URL)
 sudo chown root:antonio /etc/gestao5s.env && sudo chmod 640 /etc/gestao5s.env
 # instala o cron (linha no topo do scripts/auto-update.sh)
