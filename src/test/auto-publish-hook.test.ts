@@ -21,7 +21,9 @@ function setup() {
   const remote = path.join(base, "remote.git");
   const work = path.join(base, "work");
   mkdirSync(remote);
-  git(remote, "init", "--bare", "-q", "-b", "main");
+  // Sem `init -b`: o git do servidor (anterior ao 2.28) não tem essa opção.
+  git(remote, "init", "--bare", "-q");
+  git(remote, "symbolic-ref", "HEAD", "refs/heads/main");
   git(base, "clone", "-q", remote, work);
   git(work, "config", "user.name", "Teste");
   git(work, "config", "user.email", "teste@example.com");
