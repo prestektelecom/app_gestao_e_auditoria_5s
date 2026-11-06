@@ -323,6 +323,7 @@ function AuditRunner({
   const [confirm, setConfirm] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [viewer, setViewer] = useState<string | null>(null);
+  const [toRemove, setToRemove] = useState<Evidence | null>(null);
   const obsTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -534,6 +535,7 @@ function AuditRunner({
                     a.answer === opt.value
                       ? opt.value === "COMPLIANT" ? "border-success bg-success text-success-foreground"
                         : opt.value === "NOT_APPLICABLE" ? "border-foreground/40 bg-muted text-foreground"
+                        : opt.value === "PARTIALLY_NON_COMPLIANT" ? "border-warning bg-warning text-foreground"
                         : "border-destructive bg-destructive text-destructive-foreground"
                       : "border-border bg-card/70 hover:bg-card")}>
                   {opt.label}
@@ -552,8 +554,8 @@ function AuditRunner({
                         <div key={e.id} className="relative size-20 overflow-hidden rounded-lg border border-border bg-muted">
                           {urls[e.path] ? <img src={urls[e.path]} alt="Evidência" className="size-full object-cover" onClick={() => setViewer(urls[e.path]!)} />
                             : <Loader2 className="m-auto mt-7 size-4 animate-spin" />}
-                          <button type="button" aria-label="Remover foto" onClick={() => removeEvidence(e)}
-                            className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-foreground/70 text-background"><X className="size-3.5" /></button>
+                          <button type="button" aria-label="Remover foto" onClick={() => setToRemove(e)}
+                            className="absolute -right-1 -top-1 grid size-9 place-items-center"><span className="grid size-7 place-items-center rounded-full bg-foreground/80 text-background shadow"><X className="size-4" /></span></button>
                         </div>
                       ))}
                       {pend.map((p) => (
@@ -600,6 +602,19 @@ function AuditRunner({
       <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
         <DialogContent className="max-w-3xl p-2"><DialogTitle className="sr-only">Foto</DialogTitle>{viewer && <img src={viewer} alt="Evidência" className="w-full rounded" />}</DialogContent>
       </Dialog>
+      <AlertDialog open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover esta foto?</AlertDialogTitle>
+            <AlertDialogDescription>A foto será excluída da evidência desta pergunta.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (toRemove) removeEvidence(toRemove); setToRemove(null); }}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Shell>
   );
 }
