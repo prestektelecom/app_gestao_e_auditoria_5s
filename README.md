@@ -79,6 +79,8 @@ PC (Claude Code)  --push-->  GitHub (prestektelecom)  <--cron 2 min--  servidor
   vai para `origin/meu-ramo` e a produção não muda até juntar na `main`.
 - **Pausar:** crie o arquivo `.auto-publish-off` na raiz do projeto (fica fora do git). Apague-o
   para voltar; as alterações acumuladas são publicadas ao fim da próxima tarefa.
+- **Quando passa a valer:** o Claude Code relê o `.claude/settings.json`, então o hook costuma
+  valer já na sessão aberta. Se não disparar, abra uma sessão nova.
 
 Conferir o servidor:
 

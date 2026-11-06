@@ -16,7 +16,7 @@
 ## 3. Verificação ponta a ponta
 
 - [ ] 3.1 Conferir no servidor (feito pelo usuário, sem acesso daqui): `crontab -l` tem a linha do `scripts/auto-update.sh` com `PM2_APP` e `tail ~/deploy.log` mostra a publicação do commit da 2.4. Verificar com a saída dos dois comandos enviada pelo usuário
-- [ ] 3.2 Numa sessão nova, pedir uma alteração pequena e ver o hook bloquear uma vez, o Claude rodar `tsc` e testes, commitar com mensagem descritiva e enviar. Verificar o commit em `github.com/prestektelecom/app_gestao_e_auditoria_5s` e a versão nova no servidor em até ~2 minutos
+- [x] 3.2 Numa sessão nova, pedir uma alteração pequena e ver o hook bloquear uma vez, o Claude rodar `tsc` e testes, commitar com mensagem descritiva e enviar. Verificar o commit em `github.com/prestektelecom/app_gestao_e_auditoria_5s` e a versão nova no servidor em até ~2 minutos
 - [ ] 3.3 Com `.auto-publish-off` criado, pedir outra alteração e ver que nada é commitado. Apagar o arquivo e ver a alteração acumulada ser publicada ao fim da próxima tarefa
 - [ ] 3.4 Conferir que o hook `Stop` do vault pai (`c:\vault\.claude`) não roda junto nas sessões abertas neste projeto, ou, se rodar, que os dois não conflitam. Verificar pela saída de `/hooks`
 
