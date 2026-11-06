@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import logoPrestek from "@/assets/logo-prestek.png";
+import logoBranco from "@/assets/logo-prestek-branco.png";
+import logoHorizontal from "@/assets/logo-prestek-horizontal.png";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar — Prestek 5S" },
+      { title: "Entrar - Prestek 5S" },
       { name: "description", content: "Acesso ao Sistema de Gestão e Auditoria 5S da Prestek." },
-      { property: "og:title", content: "Entrar — Prestek 5S" },
+      { property: "og:title", content: "Entrar - Prestek 5S" },
       {
         property: "og:description",
         content: "Acesso ao Sistema de Gestão e Auditoria 5S da Prestek.",
@@ -144,16 +145,11 @@ function LoginPage() {
       <BrandPanel />
       <div className="app-backdrop flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-sm">
-          <div className="rise mb-5 flex items-center gap-3 lg:hidden">
-            <div className="grid size-9 place-items-center rounded-md border bg-card p-1 shadow-sm">
-              <img src={logoPrestek} alt="Prestek Telecom" className="size-full object-contain" />
-            </div>
-            <div>
-              <span className="font-display text-base font-semibold text-brand-orange">
-                Prestek 5S
-              </span>
-              <div className="tape-line mt-1 w-12" />
-            </div>
+          <div className="rise mb-6 flex flex-col items-center gap-2 lg:hidden">
+            <img src={logoHorizontal} alt="Prestek Telecom" className="h-11 w-auto" />
+            <span className="font-display text-sm font-semibold text-brand-orange">
+              Gestão e Auditoria 5S
+            </span>
           </div>
 
           <div className="panel p-5 sm:p-7">
@@ -292,11 +288,8 @@ function LoginPage() {
 function BrandPanel() {
   return (
     <section className="reference-login-brand hidden flex-col justify-between p-10 text-sidebar-foreground lg:flex xl:p-12">
-      <div className="rise flex items-center gap-3">
-        <div className="grid size-10 place-items-center rounded-md bg-card p-1 shadow-lg">
-          <img src={logoPrestek} alt="Prestek Telecom" className="size-full object-contain" />
-        </div>
-        <span className="font-display text-base font-semibold">Prestek Telecom</span>
+      <div className="rise">
+        <img src={logoBranco} alt="Prestek Telecom" className="h-12 w-auto xl:h-14" />
       </div>
 
       <div className="rise" style={step(2)}>
