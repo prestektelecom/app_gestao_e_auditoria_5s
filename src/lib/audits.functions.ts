@@ -125,6 +125,25 @@ export async function adminUpdateAnswerCore(
   return { ok: true };
 }
 
+/**
+ * Exclui a auditoria e tudo que depende dela (respostas, fotos, planos 5W2H, histórico). Só administrador:
+ * a função do banco confere o perfil, então a regra vale mesmo fora desta tela.
+ */
+export const deleteAudit = createServerFn({ method: "POST" })
+  .middleware([requireUser])
+  .inputValidator((d) => z.object({ id: uuid }).parse(d))
+  .handler(({ data, context }) => deleteAuditCore(context, data.id));
+
+export async function deleteAuditCore(ctx: UserContext, id: string) {
+  const { rpc } = await import("@/server/db.server");
+  const { removeFiles } = await import("@/server/storage.server");
+  // A função devolve o json com os caminhos das fotos da auditoria apagada.
+  const paths = (await userTx(ctx, (tx) => rpc(tx, "admin_delete_audit", { _audit_id: id }))) as string[] | null;
+  // Os arquivos só saem depois do commit: se a exclusão falhasse, nenhuma foto se perde.
+  if (paths?.length) await removeFiles("audit-evidences", paths);
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Plano de Ação
 // ---------------------------------------------------------------------------

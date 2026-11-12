@@ -20,6 +20,7 @@
 - Roles are stored in `public.user_roles` (one per user); RLS uses `is_admin()` / `is_active_user()` security-definer helpers — avoids privilege escalation and recursive RLS.
 - User create/update/inactivate goes through admin server functions in `src/lib/admin-users.functions.ts`; inactivating sets `auth.users.banned_until` and deletes the user's sessions — inactive users cannot sign in or keep a session.
 - Units, sectors and auditors are never hard-deleted; use `active` flags — future audits reference them.
+- Audits are the exception, and only an admin can delete one (`audits.delete`, history screen): `admin_delete_audit` (security definer, checks `is_admin`) removes the audit and its answers, evidences, 5W2H plans, change logs and the plan notifications in FK order (all `on delete restrict`), leaves a row in `audit_deletion_logs`, and returns the photo paths; `deleteAuditCore` removes those files only after the transaction commits.
 - Auditor `custom_pin_hash` is not client-readable (column grants); PINs are set via `set_auditor_pin` RPC (bcrypt) — protects auth codes.
 - CPF stored as 11-digit text with DB validation; listings show `maskCpfHidden` (first 6 digits hidden) — future audit code derives from them.
 - Sector `qr_token` is random and immutable (trigger) — QR codes survive renames.

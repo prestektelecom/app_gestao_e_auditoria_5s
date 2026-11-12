@@ -1165,6 +1165,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_audit: { Args: { _audit_id: string }; Returns: Json }
       admin_update_answer: {
         Args: {
           _answer: string

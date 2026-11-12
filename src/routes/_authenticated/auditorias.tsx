@@ -1,15 +1,16 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { listAudits } from "@/lib/audits.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteAudit, listAudits } from "@/lib/audits.functions";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { classificationText, formatScore } from "@/lib/checklist";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, friendlyError } from "@/lib/format";
 import { auditorsQuery, sectorsQuery, unitsQuery } from "@/lib/queries";
 import { Kpi } from "@/components/app/analytics-ui";
-import { EmptyState, LoadingBlock, PageHeader, Panel, Restricted } from "@/components/app/kit";
+import { ConfirmAction, EmptyState, LoadingBlock, PageHeader, Panel, Restricted } from "@/components/app/kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -45,8 +46,30 @@ function Sel({ value, onChange, all, items, className }: { value: string; onChan
   );
 }
 
+function DeleteAudit({ audit, onConfirm }: { audit: Row; onConfirm: () => Promise<void> }) {
+  return (
+    <ConfirmAction
+      destructive
+      title={`Excluir a auditoria ${audit.audit_number}?`}
+      confirmLabel="Excluir"
+      description={
+        "Serão apagados definitivamente a auditoria, as respostas, as fotos, os planos de ação gerados por ela e o histórico de alterações. Esta ação não pode ser desfeita." +
+        (audit.status === "COMPLETED" ? "" : " A auditoria está em andamento: o auditor em campo perderá o preenchimento.")
+      }
+      trigger={(open) => (
+        <Button size="icon" variant="ghost" title="Excluir" aria-label={`Excluir auditoria ${audit.audit_number}`} onClick={open}>
+          <Trash2 className="size-4 text-destructive" />
+        </Button>
+      )}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
 function Page() {
   const { role } = useAuth();
+  const qc = useQueryClient();
+  const canDelete = can(role, "audits.delete");
   const audits = useQuery({
     queryKey: ["audits"],
     queryFn: async () => {
@@ -80,6 +103,15 @@ function Page() {
   const set = (k: keyof typeof f) => (v: string) => { setF({ ...f, [k]: v, ...(k === "unit" ? { sector: "all" } : {}) }); setPage(0); };
 
   if (!can(role, "audits.view")) return <Restricted />;
+  const remove = async (a: Row) => {
+    try { await deleteAudit({ data: { id: a.id } }); }
+    catch (error) { toast.error(friendlyError(error)); return; }
+    toast.success(`Auditoria ${a.audit_number} excluída`);
+    // A auditoria alimenta lista, indicadores, plano de ação, notificações e histórico: tudo é recarregado.
+    for (const key of ["audits", "analytics", "action-plans", "notifications", "dashboard", "change-logs"]) {
+      qc.invalidateQueries({ queryKey: [key] });
+    }
+  };
   const status = (s: string) => s === "COMPLETED"
     ? <span className="text-xs font-medium text-success">Concluída</span>
     : <span className="text-xs font-medium text-muted-foreground">Em andamento</span>;
@@ -148,7 +180,10 @@ function Page() {
                         <TableCell className={cn(a.ncp_count > 0 && "font-semibold text-destructive")}>{a.status === "COMPLETED" ? a.ncp_count : "—"}</TableCell>
                         <TableCell className="text-xs">{a.location_status === "REGISTERED" ? "Registrada" : "Não registrada"}</TableCell>
                         <TableCell>{status(a.status)}</TableCell>
-                        <TableCell className="pr-6"><Button size="sm" variant="ghost" asChild><Link to="/auditorias/$id" params={{ id: a.id }}>Ver</Link></Button></TableCell>
+                        <TableCell className="whitespace-nowrap pr-6 text-right">
+                          <Button size="sm" variant="ghost" asChild><Link to="/auditorias/$id" params={{ id: a.id }}>Ver</Link></Button>
+                          {canDelete && <DeleteAudit audit={a} onConfirm={() => remove(a)} />}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -156,14 +191,17 @@ function Page() {
               </div>
               <div className="divide-y divide-border lg:hidden">
                 {rows.map((a) => (
-                  <Link key={a.id} to="/auditorias/$id" params={{ id: a.id }} className="block p-4 hover:bg-foreground/5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div><p className="font-mono text-xs">{a.audit_number}</p><p className="font-medium">{a.unit_name_snapshot} · {a.sector_name_snapshot}</p></div>
-                      {status(a.status)}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(a.started_at)} · {a.auditor_name_snapshot}</p>
-                    {a.status === "COMPLETED" && <p className="mt-1 text-sm font-medium">{formatScore(a.overall_score)} · {classificationText(a.classification)} · NC {a.nc_count} · NCP {a.ncp_count}</p>}
-                  </Link>
+                  <div key={a.id} className="flex items-start hover:bg-foreground/5">
+                    <Link to="/auditorias/$id" params={{ id: a.id }} className="block min-w-0 flex-1 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div><p className="font-mono text-xs">{a.audit_number}</p><p className="font-medium">{a.unit_name_snapshot} · {a.sector_name_snapshot}</p></div>
+                        {status(a.status)}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(a.started_at)} · {a.auditor_name_snapshot}</p>
+                      {a.status === "COMPLETED" && <p className="mt-1 text-sm font-medium">{formatScore(a.overall_score)} · {classificationText(a.classification)} · NC {a.nc_count} · NCP {a.ncp_count}</p>}
+                    </Link>
+                    {canDelete && <div className="py-2 pr-2"><DeleteAudit audit={a} onConfirm={() => remove(a)} /></div>}
+                  </div>
                 ))}
               </div>
               {pages > 1 && (
