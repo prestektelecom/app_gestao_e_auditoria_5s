@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { auditorHasPin, saveAuditor, setAuditorPin } from "@/lib/registry.functions";
+import { saveAuditor } from "@/lib/registry.functions";
 import { createUser, updateUser } from "@/lib/admin-users.functions";
 import { friendlyError, isValidCpf, maskCpf, onlyDigits } from "@/lib/format";
 import { ROLES, ROLE_LABEL, type Role } from "@/lib/permissions";
@@ -104,24 +104,19 @@ export function AuditorDialog({
   units: Unit[]; sectors: Sector[]; users: UserRow[]; auditors: Auditor[];
 }) {
   const invalidate = useInvalidateRegistry();
-  const empty = { name: "", cpf: "", admission_date: "", job_title: "", unit_id: "", sector_id: "", user_id: "", system_access: false, authorized: true, active: true, pin: "" };
+  const empty = { name: "", cpf: "", admission_date: "", job_title: "", unit_id: "", sector_id: "", user_id: "", system_access: false, authorized: true, active: true };
   const [f, setF] = useState(empty);
-  const [hasPin, setHasPin] = useState(false);
-  const [clearPin, setClearPin] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setClearPin(false);
-    setHasPin(false);
     setF(auditor ? {
       name: auditor.name, cpf: maskCpf(auditor.cpf), admission_date: auditor.admission_date ?? "", job_title: auditor.job_title ?? "",
       unit_id: auditor.unit_id, sector_id: auditor.sector_id, user_id: auditor.user_id ?? "", system_access: !!auditor.user_id,
-      authorized: auditor.authorized, active: auditor.active, pin: "",
+      authorized: auditor.authorized, active: auditor.active,
     } : empty);
-    if (auditor) auditorHasPin({ data: { auditorId: auditor.id } }).then((v) => setHasPin(!!v)).catch(() => setHasPin(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, auditor]);
 
@@ -139,7 +134,6 @@ export function AuditorDialog({
     if (!f.sector_id) e.sector_id = "Selecione o setor.";
     else if (!sectors.some((s) => s.id === f.sector_id && s.unit_id === f.unit_id)) e.sector_id = "O setor não pertence à unidade selecionada.";
     if (f.system_access && !f.user_id) e.user_id = "Selecione o usuário vinculado.";
-    if (f.pin && !/^\d{4,8}$/.test(f.pin)) e.pin = "O PIN deve ter de 4 a 8 dígitos.";
     setErrors(e);
     if (Object.keys(e).length) return;
 
@@ -149,19 +143,11 @@ export function AuditorDialog({
       unit_id: f.unit_id, sector_id: f.sector_id, user_id: f.system_access ? f.user_id : null,
       authorized: f.authorized, active: f.active,
     };
-    let id: string;
     try {
-      id = (await saveAuditor({ data: { ...payload, ...(auditor ? { id: auditor.id } : {}) } })).id;
+      await saveAuditor({ data: { ...payload, ...(auditor ? { id: auditor.id } : {}) } });
     } catch (error) {
       setBusy(false);
       return toast.error(friendlyError(error));
-    }
-    if (f.pin || clearPin) {
-      try {
-        await setAuditorPin({ data: { auditorId: id, pin: clearPin ? "" : f.pin } });
-      } catch (error) {
-        toast.error(friendlyError(error));
-      }
     }
     setBusy(false);
     toast.success(auditor ? "Auditor atualizado." : "Auditor cadastrado.");
@@ -205,6 +191,9 @@ export function AuditorDialog({
           </Field>
           <div className="sm:col-span-2 grid gap-3">
             <Toggle label="Acesso ao sistema" checked={f.system_access} onChange={(v) => setF({ ...f, system_access: v, user_id: v ? f.user_id : "" })} />
+            <p className="-mt-1 text-xs text-muted-foreground">
+              No QR Code do setor, o auditor entra com o e-mail e a senha do usuário vinculado. Sem usuário vinculado, ele não consegue auditar.
+            </p>
             {f.system_access && (
               <Field label="Usuário vinculado *" error={errors.user_id}>
                 <Select value={f.user_id || NONE} onValueChange={(v) => setF({ ...f, user_id: v === NONE ? "" : v })}>
@@ -218,18 +207,6 @@ export function AuditorDialog({
             )}
             <Toggle label="Auditor autorizado" checked={f.authorized} onChange={(v) => setF({ ...f, authorized: v })} />
             <Toggle label="Auditor ativo" checked={f.active} onChange={(v) => setF({ ...f, active: v })} />
-          </div>
-          <div className="sm:col-span-2">
-            <Field label={hasPin ? "PIN personalizado (já definido — preencha para trocar)" : "PIN personalizado (opcional)"} error={errors.pin} htmlFor="a-pin">
-              <Input id="a-pin" type="password" inputMode="numeric" autoComplete="new-password" maxLength={8} value={f.pin} disabled={clearPin}
-                onChange={(e) => setF({ ...f, pin: onlyDigits(e.target.value) })} />
-            </Field>
-            {hasPin && (
-              <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <input type="checkbox" checked={clearPin} onChange={(e) => setClearPin(e.target.checked)} /> Remover PIN personalizado
-              </label>
-            )}
-            <p className="mt-1 text-xs text-muted-foreground">O PIN é armazenado de forma criptografada e nunca é exibido.</p>
           </div>
         </div>
         <DialogFooter>

@@ -26,8 +26,25 @@ async function anon<T>(req: Req, fn: (tx: import("@/server/db.server").Tx, rpc: 
 // ---------------------------------------------------------------------------
 export const qrLogic = {
   sectorInfo: (req: Req, token: string) => anon(req, (tx, rpc) => rpc(tx, "qr_sector_info", { _token: token })),
-  validateAuditor: (req: Req, token: string, code: string) =>
-    anon(req, (tx, rpc) => rpc(tx, "qr_validate_auditor", { _token: token, _code: code })),
+  /**
+   * O auditor se identifica com o e-mail e a senha do login. Mesmo limite de tentativas
+   * e mesmas mensagens da tela de login; com a senha certa, o banco confere se o usuário
+   * está ligado a um auditor ativo e autorizado e emite o ticket.
+   */
+  async validateAuditor(req: Req, token: string, email: string, password: string) {
+    const { asService, rpc } = await import("@/server/db.server");
+    const auth = await import("@/server/auth.server");
+    const { INVALID_CREDENTIALS, INACTIVE_ACCOUNT, TOO_MANY_ATTEMPTS } = await import("./auth.functions");
+    const ip = req.ip ?? null;
+    return asService(async (tx) => {
+      if (await auth.isRateLimited(tx, "login", email, ip)) return { ok: false, error: TOO_MANY_ATTEMPTS };
+      const user = await auth.checkCredentials(tx, email, password);
+      await auth.recordAttempt(tx, "login", email, ip, typeof user === "object" && user !== null);
+      if (user === null) return { ok: false, error: INVALID_CREDENTIALS };
+      if (user === "inactive") return { ok: false, error: INACTIVE_ACCOUNT };
+      return rpc(tx, "qr_issue_ticket", { _token: token, _user_id: user.id });
+    }, req);
+  },
   startAudit: (req: Req, d: { ticket: string; companion: string; lat: number | null; lng: number | null; locationStatus: string }) =>
     anon(req, (tx, rpc) =>
       rpc(tx, "qr_start_audit", {
@@ -104,8 +121,8 @@ export const qrSectorInfo = createServerFn({ method: "POST" })
 
 export const qrValidateAuditor = createServerFn({ method: "POST" })
   .middleware([withRequestInfo])
-  .inputValidator((d) => z.object({ token: tokenSchema, code: z.string().max(20) }).parse(d))
-  .handler(({ data, context }) => qrLogic.validateAuditor(context, data.token, data.code));
+  .inputValidator((d) => z.object({ token: tokenSchema, email: z.string().max(255), password: z.string().max(200) }).parse(d))
+  .handler(({ data, context }) => qrLogic.validateAuditor(context, data.token, data.email, data.password));
 
 export const qrStartAudit = createServerFn({ method: "POST" })
   .middleware([withRequestInfo])

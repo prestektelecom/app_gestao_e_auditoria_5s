@@ -1253,6 +1253,7 @@ export type Database = {
         Args: { _audit_id: string; _session: string }
         Returns: Json
       }
+      qr_issue_ticket: { Args: { _token: string; _user_id: string }; Returns: Json }
       qr_remove_evidence: {
         Args: { _audit_id: string; _evidence_id: string; _session: string }
         Returns: Json
@@ -1280,10 +1281,6 @@ export type Database = {
           _location_status: string
           _ticket: string
         }
-        Returns: Json
-      }
-      qr_validate_auditor: {
-        Args: { _code: string; _token: string }
         Returns: Json
       }
       recalc_audit: { Args: { _audit_id: string }; Returns: undefined }

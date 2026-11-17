@@ -57,6 +57,13 @@
       "when": 1794441600000,
       "tag": "0007_admin_delete_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794918358719,
+      "tag": "0008_qr_login_password",
+      "breakpoints": true
     }
   ]
 }

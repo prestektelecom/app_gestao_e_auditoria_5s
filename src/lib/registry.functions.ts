@@ -163,19 +163,3 @@ export const saveAuditor = createServerFn({ method: "POST" })
     }),
   );
 
-export const auditorHasPin = createServerFn({ method: "GET" })
-  .middleware([requireUser])
-  .inputValidator((d) => z.object({ auditorId: uuid }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { rpc } = await import("@/server/db.server");
-    return userTx(context, (tx) => rpc(tx, "auditor_has_pin", { _auditor_id: data.auditorId }));
-  });
-
-export const setAuditorPin = createServerFn({ method: "POST" })
-  .middleware([requireUser])
-  .inputValidator((d) => z.object({ auditorId: uuid, pin: z.string().regex(/^(\d{4,8})?$/) }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { rpc } = await import("@/server/db.server");
-    await userTx(context, (tx) => rpc(tx, "set_auditor_pin", { _auditor_id: data.auditorId, _pin: data.pin }));
-    return { ok: true };
-  });

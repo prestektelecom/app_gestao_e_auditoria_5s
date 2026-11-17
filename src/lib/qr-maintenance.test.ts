@@ -18,7 +18,9 @@ const { qrLogic, INVALID_SESSION } = await import("./qr.functions");
 const { maintLogic, NO_PERMISSION } = await import("./maintenance.functions");
 const { notificationLogic } = await import("./notifications.functions");
 
-const CPF = "52998224725"; // código do QR = 6 primeiros dígitos do CPF
+const CPF = "52998224725";
+const AUD_EMAIL = "aud@teste.com";
+const AUD_PASSWORD = "senha-de-teste-1"; // padrão do makeUser
 const req = { ip: "203.0.113.10" };
 type Json = Record<string, unknown>;
 
@@ -42,8 +44,8 @@ describe.skipIf(!hasTestDb)("fluxos de QR, manutenção e notificações", () =>
         insert into public.sectors (unit_id, name) values (${u!.id}, 'Almoxarifado') returning id, qr_token`;
       sectorId = s!.id;
       qrToken = s!.qr_token;
-      await tx`insert into public.auditors (name, cpf, unit_id, sector_id, authorized, active)
-               values ('Auditor QR', ${CPF}, ${u!.id}, ${s!.id}, true, true)`;
+      await tx`insert into public.auditors (name, cpf, unit_id, sector_id, user_id, authorized, active)
+               values ('Auditor QR', ${CPF}, ${u!.id}, ${s!.id}, ${auditorUserId}, true, true)`;
       // Checklist publicado (perguntas só podem ser criadas em rascunho).
       const [v] = await tx<{ id: string }[]>`insert into public.checklist_versions (version_number, status) values ('1.0', 'DRAFT') returning id`;
       let pos = 0;
@@ -65,9 +67,14 @@ describe.skipIf(!hasTestDb)("fluxos de QR, manutenção e notificações", () =>
     const info = (await qrLogic.sectorInfo(req, qrToken)) as Json;
     expect(info).toMatchObject({ active: true, has_checklist: true, sector_name: "Almoxarifado" });
 
-    const bad = (await qrLogic.validateAuditor(req, qrToken, "000000")) as Json;
-    expect(bad.ok).toBe(false);
-    const v = (await qrLogic.validateAuditor(req, qrToken, CPF.slice(0, 6))) as Json;
+    // O código do CPF não vale mais: só e-mail e senha do login.
+    const bad = (await qrLogic.validateAuditor(req, qrToken, AUD_EMAIL, CPF.slice(0, 6))) as Json;
+    expect(bad).toMatchObject({ ok: false, error: "E-mail ou senha inválidos." });
+    // Senha certa, mas o usuário não está ligado a nenhum auditor.
+    const notAuditor = (await qrLogic.validateAuditor(req, qrToken, "admin@teste.com", "senha-de-teste-1")) as Json;
+    expect(notAuditor.ok).toBe(false);
+    expect(String(notAuditor.error)).toContain("não está ligado a um auditor");
+    const v = (await qrLogic.validateAuditor(req, qrToken, AUD_EMAIL.toUpperCase(), AUD_PASSWORD)) as Json;
     expect(v).toMatchObject({ ok: true, auditor_name: "Auditor QR" });
 
     const st = (await qrLogic.startAudit(req, {

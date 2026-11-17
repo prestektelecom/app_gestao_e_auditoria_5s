@@ -85,7 +85,8 @@ function QrAuditPage() {
   const [data, setData] = useState<AuditData | null>(null);
 
   // validation + setup state
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ticket, setTicket] = useState<{ ticket: string; auditor: string; now: string } | null>(null);
@@ -126,14 +127,14 @@ function QrAuditPage() {
   async function validate(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!/^\d{6}$/.test(code)) return setError("Informe os 6 dígitos do código.");
+    if (!email.trim() || !password) return setError("Informe seu e-mail e sua senha.");
     setBusy(true);
-    const r = await qrValidateAuditor({ data: { token, code } }).catch(() => null);
+    const r = await qrValidateAuditor({ data: { token, email: email.trim(), password } }).catch(() => null);
     setBusy(false);
     const res = r as unknown as { ok: boolean; error?: string; auditor_name?: string; ticket?: string; server_now?: string } | null;
-    if (!res?.ok) return setError(res?.error ?? "Código inválido ou auditor não autorizado.");
+    if (!res?.ok) return setError(res?.error ?? "Não foi possível validar. Tente novamente.");
     setTicket({ ticket: res.ticket!, auditor: res.auditor_name!, now: res.server_now! });
-    setCode("");
+    setPassword("");
     setStep("setup");
     requestLocation();
   }
@@ -208,10 +209,14 @@ function QrAuditPage() {
           <div className="flex justify-between gap-3"><dt className="eyebrow">Setor</dt><dd className="text-right font-medium">{info?.sector_name}</dd></div>
         </dl>
         <div className="grid gap-2">
-          <Label htmlFor="code">Código do Auditor</Label>
-          <Input id="code" inputMode="numeric" autoComplete="off" type="password" maxLength={6} placeholder="••••••"
-            className="h-14 text-center font-mono text-2xl tracking-[0.5em]" value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          <Label htmlFor="qr-email">E-mail</Label>
+          <Input id="qr-email" type="email" inputMode="email" autoComplete="username" className="h-12" value={email}
+            onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="qr-password">Senha</Label>
+          <Input id="qr-password" type="password" autoComplete="current-password" className="h-12" value={password}
+            onChange={(e) => setPassword(e.target.value)} />
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <Button size="lg" className="h-12" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} VALIDAR</Button>
