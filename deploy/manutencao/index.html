@@ -1,12 +1,13 @@
 <!doctype html>
 <!--
-  Página de manutenção do Prestek 5S. O Apache a mostra (ErrorDocument 503) quando o app
+  Página de manutenção do Prestek 5S. O Apache a mostra (ErrorDocument 502/503) quando o app
   está fora do ar, por exemplo no reinício de uma publicação. Fica fora do app de propósito:
   precisa funcionar justamente quando o node não responde. Veja o README, "Página de manutenção".
 
   Lê /manutencao/status.json (gravado pelo scripts/deploy.sh) para mostrar a etapa e a
   previsão, e confere a cada 5 s se o app voltou; quando volta, recarrega a página.
   Todos os caminhos são absolutos: a página aparece no endereço que a pessoa abriu.
+  Sem recursos externos (fontes, imagens, scripts): tudo está neste arquivo e no logo.png.
 -->
 <html lang="pt-BR">
 <head>
@@ -20,97 +21,132 @@
     --navy: #16357a;
     --navy-ink: #0f2557;
     --orange: #ef7d1a;
-    --bg: #f3f6fb;
-    --card: #ffffff;
+    --bg: #ffffff;
+    --soft: #f3f6fb;
     --text: #1b2433;
     --muted: #5d6b82;
     --line: #dfe5ef;
     --ok: #1f9d55;
-    --bad: #c2410c;
+    --hole: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0c1426;
-      --card: #131e36;
+      --soft: #131e36;
       --text: #e8edf6;
       --muted: #9aa8c2;
       --line: #24324f;
-      --navy: #8fb0ff;
-      --navy-ink: #c9d8ff;
+      --navy: #4f7be0;
+      --navy-ink: #dbe5ff;
+      --hole: #0c1426;
     }
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
     min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 24px 16px;
-    background:
-      radial-gradient(60rem 30rem at 110% -10%, color-mix(in srgb, var(--orange) 14%, transparent), transparent 60%),
-      radial-gradient(50rem 30rem at -10% 110%, color-mix(in srgb, var(--navy) 14%, transparent), transparent 60%),
-      var(--bg);
+    background: var(--bg);
     color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  main {
-    width: 100%;
-    max-width: 460px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 32px 28px 26px;
-    box-shadow: 0 20px 50px -24px rgba(15, 37, 87, .35);
-    text-align: center;
+  .page { max-width: 640px; margin: 0 auto; padding: 28px 16px 40px; text-align: center; }
+
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: .9rem; font-weight: 600; letter-spacing: .02em; }
+  .brand img { width: 44px; height: 44px; border-radius: 10px; }
+
+  /* Ilustração: engrenagens girando e as ondas de sinal da logo */
+  .hero { position: relative; margin: 8px auto 0; width: 100%; max-width: 420px; }
+  .hero svg { display: block; width: 100%; height: auto; }
+  .big {
+    position: absolute; left: 0; right: 0; top: 4%;
+    font-size: clamp(2.6rem, 11vw, 4.6rem); font-weight: 800; line-height: 1; letter-spacing: -.03em;
+    color: var(--navy-ink); opacity: .08; pointer-events: none; user-select: none;
   }
-  .logo { width: 132px; height: auto; display: block; margin: 0 auto 8px; border-radius: 12px; }
-  h1 { margin: 10px 0 6px; font-size: 1.45rem; line-height: 1.25; color: var(--navy-ink); letter-spacing: -.01em; }
-  .lead { margin: 0 auto; color: var(--muted); max-width: 34ch; }
+  .gear-a { transform-box: fill-box; transform-origin: center; animation: spin 7s linear infinite; }
+  .gear-b { transform-box: fill-box; transform-origin: center; animation: spin 4.7s linear infinite reverse; }
+  .gear-c { transform-box: fill-box; transform-origin: center; animation: spin 5.6s linear infinite reverse; }
+  .wave { animation: wave 1.8s ease-in-out infinite; }
+  .wave.w2 { animation-delay: .25s; }
+  .wave.w3 { animation-delay: .5s; }
+  .shadow { animation: breathe 3.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes wave { 0%, 100% { opacity: .15; } 40% { opacity: 1; } }
+  @keyframes breathe { 50% { transform: scaleX(.9); opacity: .6; } }
+
+  h1 { margin: 6px 0 8px; font-size: clamp(1.6rem, 5.5vw, 2.3rem); line-height: 1.15; letter-spacing: -.02em; color: var(--navy-ink); }
+  .lead { margin: 0 auto; max-width: 42ch; color: var(--muted); font-size: 1.05rem; }
 
   /* Previsão */
-  .eta {
-    margin: 22px 0 6px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--navy) 7%, transparent);
-    border: 1px solid color-mix(in srgb, var(--navy) 18%, transparent);
-  }
-  .eta-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .eta-value { font-size: 1.9rem; font-weight: 700; color: var(--navy-ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .eta { margin: 24px auto 0; max-width: 420px; padding: 16px 18px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); }
+  .eta-label { font-size: .76rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+  .eta-value { font-size: 2rem; font-weight: 800; color: var(--navy-ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
   .eta-sub { font-size: .85rem; color: var(--muted); }
-
-  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 14px 0 4px; }
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 12px 0 2px; }
   .bar > span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--navy), var(--orange)); transition: width .8s ease; }
   .bar.indeterminate > span { width: 35%; animation: slide 1.4s ease-in-out infinite; }
   @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
   /* Etapas */
-  ol { list-style: none; padding: 0; margin: 18px 0 0; text-align: left; display: grid; gap: 2px; }
-  li { display: flex; align-items: center; gap: 10px; padding: 7px 4px; font-size: .93rem; color: var(--muted); }
+  ol { list-style: none; padding: 0; margin: 14px auto 0; max-width: 420px; text-align: left; display: grid; gap: 2px; }
+  li { display: flex; align-items: center; gap: 10px; padding: 6px 4px; font-size: .93rem; color: var(--muted); }
   .dot { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
   li.done { color: var(--text); }
   li.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
   li.now { color: var(--text); font-weight: 600; }
   li.now .dot { border-color: var(--orange); border-top-color: transparent; animation: spin .9s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .check { margin-top: 20px; font-size: .85rem; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .25; } }
+  .actions { margin-top: 22px; display: grid; justify-items: center; gap: 10px; }
   button {
-    margin-top: 14px; font: inherit; font-weight: 600; color: #fff; background: var(--navy);
-    border: 0; border-radius: 12px; padding: 11px 20px; min-height: 44px; cursor: pointer;
+    font: inherit; font-weight: 700; color: #fff; background: var(--navy);
+    border: 0; border-radius: 12px; padding: 12px 26px; min-height: 48px; cursor: pointer;
+    box-shadow: 0 10px 24px -12px rgba(22, 53, 122, .7);
   }
-  @media (prefers-color-scheme: dark) { button { background: #2a56c6; } }
-  button:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
-  .back { color: var(--ok); font-weight: 600; }
+  button:hover { filter: brightness(1.08); }
+  button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+  .check { font-size: .85rem; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: wave 1.6s ease-in-out infinite; }
+  .back { color: var(--ok); font-weight: 700; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<main>
-  <img class="logo" src="/manutencao/logo.png" alt="Prestek Telecom" width="132" height="132">
+<div class="page">
+  <div class="brand"><img src="/manutencao/logo.png" alt="" width="44" height="44">Prestek 5S · Gestão e Auditoria</div>
+
+  <div class="hero" aria-hidden="true">
+    <div class="big">manutenção</div>
+    <svg viewBox="0 0 420 260" role="presentation">
+      <!-- sombra no chão -->
+      <ellipse class="shadow" cx="200" cy="238" rx="150" ry="10" fill="var(--line)"/>
+      <!-- engrenagem grande (azul): dentes = traço tracejado em volta do corpo -->
+      <g class="gear-a">
+        <circle cx="160" cy="140" r="70" fill="none" stroke="var(--navy)" stroke-width="22" stroke-dasharray="18.3 18.35"/>
+        <circle cx="160" cy="140" r="62" fill="var(--navy)"/>
+        <circle cx="160" cy="140" r="34" fill="none" stroke="var(--hole)" stroke-width="6" stroke-dasharray="10 8" opacity=".35"/>
+        <circle cx="160" cy="140" r="20" fill="var(--hole)"/>
+      </g>
+      <!-- engrenagem média (laranja) -->
+      <g class="gear-b">
+        <circle cx="262" cy="196" r="40" fill="none" stroke="var(--orange)" stroke-width="16" stroke-dasharray="15.7 15.72"/>
+        <circle cx="262" cy="196" r="34" fill="var(--orange)"/>
+        <circle cx="262" cy="196" r="12" fill="var(--hole)"/>
+      </g>
+      <!-- engrenagem pequena (azul claro) -->
+      <g class="gear-c" opacity=".55">
+        <circle cx="262" cy="92" r="26" fill="none" stroke="var(--navy)" stroke-width="12" stroke-dasharray="10.2 10.22"/>
+        <circle cx="262" cy="92" r="21" fill="var(--navy)"/>
+        <circle cx="262" cy="92" r="8" fill="var(--hole)"/>
+      </g>
+      <!-- ondas de sinal (como na logo) -->
+      <g fill="none" stroke="var(--orange)" stroke-width="7" stroke-linecap="round">
+        <path class="wave w1" d="M318 70 a22 22 0 0 1 22 22"/>
+        <path class="wave w2" d="M318 50 a42 42 0 0 1 42 42"/>
+        <path class="wave w3" d="M318 30 a62 62 0 0 1 62 62"/>
+      </g>
+    </svg>
+  </div>
+
   <h1 id="title">Estamos atualizando o sistema</h1>
   <p class="lead" id="lead">Uma nova versão do Prestek 5S está sendo instalada. Já voltamos — esta página recarrega sozinha.</p>
 
@@ -123,15 +159,17 @@
 
   <ol id="steps" hidden></ol>
 
-  <div class="check" id="check"><span class="pulse"></span><span id="check-text">Verificando se o sistema voltou…</span></div>
-  <button type="button" id="retry">Tentar agora</button>
-</main>
+  <div class="actions">
+    <button type="button" id="retry">Tentar agora</button>
+    <div class="check" id="check"><span class="pulse"></span><span id="check-text">Verificando se o sistema voltou…</span></div>
+  </div>
+</div>
 
 <script>
 (function () {
   var STEPS = ["Preparando a nova versão", "Conferindo o código", "Atualizando o banco de dados", "Gerando o sistema", "Reiniciando"];
   var CHECK_EVERY = 5; // segundos
-  var status = null, fetchedAt = 0, nextCheck = CHECK_EVERY;
+  var status = null, nextCheck = CHECK_EVERY;
   var $ = function (id) { return document.getElementById(id); };
 
   function fmtClock(sec) {
@@ -204,7 +242,7 @@
   function loadStatus() {
     return fetch("/manutencao/status.json?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { status = j; fetchedAt = Date.now(); render(); })
+      .then(function (j) { status = j; render(); })
       .catch(function () { status = null; render(); });
   }
 

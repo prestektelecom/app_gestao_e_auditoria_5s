@@ -144,6 +144,22 @@ export async function deleteAuditCore(ctx: UserContext, id: string) {
   return { ok: true };
 }
 
+/**
+ * Conclui à força uma auditoria em andamento (abandonada em campo), sem cobrar respostas, observações
+ * nem fotos. Só administrador: a função do banco confere o perfil e grava o motivo no histórico.
+ */
+export const forceFinalizeAudit = createServerFn({ method: "POST" })
+  .middleware([requireUser])
+  .inputValidator((d) => z.object({ id: uuid, reason: z.string().max(1000) }).parse(d))
+  .handler(({ data, context }) => forceFinalizeAuditCore(context, data.id, data.reason));
+
+export async function forceFinalizeAuditCore(ctx: UserContext, id: string, reason: string) {
+  const { rpc } = await import("@/server/db.server");
+  return (await userTx(ctx, (tx) => rpc(tx, "admin_force_finalize_audit", { _audit_id: id, _reason: reason }))) as {
+    ok: boolean; audit_number: string; overall_score: number | null; classification: string | null; finished_at: string; unanswered: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Plano de Ação
 // ---------------------------------------------------------------------------

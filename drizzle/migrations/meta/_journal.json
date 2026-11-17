@@ -78,6 +78,13 @@
       "when": 1794921971766,
       "tag": "0010_nc_requirements_setting",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794960000000,
+      "tag": "0011_admin_force_finalize",
+      "breakpoints": true
     }
   ]
 }

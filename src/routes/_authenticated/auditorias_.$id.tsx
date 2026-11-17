@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Loader2, MapPin, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Loader2, MapPin, Pencil } from "lucide-react";
 import { PLAN_STATUS } from "@/lib/analytics";
 import { toast } from "sonner";
-import { adminUpdateAnswer, getAudit, getEvidenceUrls, listAuditLogs, listAuditPlans } from "@/lib/audits.functions";
+import { adminUpdateAnswer, forceFinalizeAudit, getAudit, getEvidenceUrls, listAuditLogs, listAuditPlans } from "@/lib/audits.functions";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { ANSWERS, LOCATION_LABEL, SENSES, answerLabel, classificationText, formatScore, requiresEvidence, senseLabel, type AnswerValue } from "@/lib/checklist";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, friendlyError } from "@/lib/format";
 import { EmptyState, LoadingBlock, PageHeader, Panel, Restricted } from "@/components/app/kit";
 import { Field } from "@/components/app/unit-sector-forms";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ function Detail() {
   const [viewer, setViewer] = useState<string | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [edit, setEdit] = useState<Ans | null>(null);
+  const [forceOpen, setForceOpen] = useState(false);
 
   useEffect(() => {
     const paths = (q.data?.evidences ?? []).map((e) => e.storage_path);
@@ -82,11 +83,20 @@ function Detail() {
   if (!a) return <Panel><EmptyState title="Auditoria não encontrada." action={<Button asChild variant="outline"><Link to="/auditorias">Voltar</Link></Button>} /></Panel>;
   const done = a.status === "COMPLETED";
   const canEdit = done && can(role, "audits.edit");
+  const canForce = !done && can(role, "audits.forceFinalize");
+  const unanswered = (q.data?.answers ?? []).filter((r) => !r.answer).length;
+  const refreshAll = () => {
+    for (const key of [["audit", id], ["audit-logs", id], ["audit-plans", id], ["audits"], ["analytics"], ["action-plans"], ["notifications"], ["dashboard"]]) {
+      qc.invalidateQueries({ queryKey: key });
+    }
+  };
 
   return (
     <>
       <Link to="/auditorias" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Auditorias</Link>
-      <PageHeader title={a.audit_number} subtitle={done ? "Auditoria concluída" : "Auditoria em andamento"} actions={done && (
+      <PageHeader title={a.audit_number} subtitle={done ? "Auditoria concluída" : "Auditoria em andamento"} actions={canForce ? (
+        <Button variant="outline" onClick={() => setForceOpen(true)}><CheckCircle2 className="size-4" /> Forçar finalização</Button>
+      ) : done && (
         <>
           <Button variant="outline" asChild><Link to="/imprimir/auditoria/$id" params={{ id }} search={{ mode: "resumo" }}><FileText className="size-4" /> Gerar PDF Resumido</Link></Button>
           <Button asChild><Link to="/imprimir/auditoria/$id" params={{ id }} search={{ mode: "completo" }}><FileText className="size-4" /> Gerar PDF Completo</Link></Button>
@@ -206,14 +216,49 @@ function Detail() {
       <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
         <DialogContent className="max-w-3xl p-2"><DialogTitle className="sr-only">Foto</DialogTitle>{viewer && <img src={viewer} alt="Evidência" className="w-full rounded" />}</DialogContent>
       </Dialog>
-      <EditAnswerDialog answer={edit} onClose={() => setEdit(null)} onSaved={() => {
-        qc.invalidateQueries({ queryKey: ["audit", id] }); qc.invalidateQueries({ queryKey: ["audit-logs", id] }); qc.invalidateQueries({ queryKey: ["audits"] }); qc.invalidateQueries({ queryKey: ["audit-plans", id] }); qc.invalidateQueries({ queryKey: ["analytics"] }); qc.invalidateQueries({ queryKey: ["action-plans"] });
-      }} />
+      <EditAnswerDialog answer={edit} onClose={() => setEdit(null)} onSaved={refreshAll} />
+      <ForceFinalizeDialog open={forceOpen} auditId={id} auditNumber={a.audit_number} unanswered={unanswered} onClose={() => setForceOpen(false)} onDone={refreshAll} />
     </>
   );
 }
 
-const fmtLog = (v: string | null) => (v ? ANSWERS.find((x) => x.value === v)?.label ?? v : "—");
+const STATUS_LABEL: Record<string, string> = { IN_PROGRESS: "Em andamento", COMPLETED: "Concluída" };
+const fmtLog = (v: string | null) => (v ? ANSWERS.find((x) => x.value === v)?.label ?? STATUS_LABEL[v] ?? v : "—");
+
+function ForceFinalizeDialog({ open, auditId, auditNumber, unanswered, onClose, onDone }: {
+  open: boolean; auditId: string; auditNumber: string; unanswered: number; onClose: () => void; onDone: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) setReason(""); }, [open]);
+  async function confirm() {
+    if (reason.trim().length < 5) return toast.error("Informe o motivo da finalização (mínimo 5 caracteres).");
+    setBusy(true);
+    try {
+      await forceFinalizeAudit({ data: { id: auditId, reason } });
+    } catch (e) {
+      return toast.error(friendlyError(e));
+    } finally {
+      setBusy(false);
+    }
+    toast.success(`Auditoria ${auditNumber} finalizada.`);
+    onDone(); onClose();
+  }
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>Forçar finalização da auditoria {auditNumber}?</DialogTitle></DialogHeader>
+        <div className="grid gap-2 text-sm text-muted-foreground">
+          <p>A auditoria será concluída como está, sem exigir respostas, observações ou fotos. A nota considera só as perguntas respondidas e os planos de ação das NC/NCP são gerados.</p>
+          {unanswered > 0 && <p className="font-medium text-destructive">{unanswered} pergunta(s) ainda sem resposta. Depois de concluída, você pode completá-las pela opção Alterar de cada pergunta.</p>}
+          <p>O auditor em campo não poderá mais alterar esta auditoria.</p>
+        </div>
+        <Field label="Motivo da finalização *"><Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} /></Field>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={confirm} disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Finalizar auditoria</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function EditAnswerDialog({ answer, onClose, onSaved }: { answer: Ans | null; onClose: () => void; onSaved: () => void }) {
   const [value, setValue] = useState<AnswerValue>("COMPLIANT");

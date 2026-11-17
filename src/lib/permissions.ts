@@ -31,6 +31,7 @@ const PERMISSIONS = {
   "checklist.propose": ["admin", "auditor"],
   "audits.edit": ["admin"],
   "audits.delete": ["admin"],
+  "audits.forceFinalize": ["admin"],
   "audits.map": ["admin", "auditor", "director"],
   "audits.logs": ["admin", "auditor", "director"],
   "qrcodes.view": ["admin"],
