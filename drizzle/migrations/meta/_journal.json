@@ -71,6 +71,13 @@
       "when": 1794919173034,
       "tag": "0009_admin_can_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794921971766,
+      "tag": "0010_nc_requirements_setting",
+      "breakpoints": true
     }
   ]
 }

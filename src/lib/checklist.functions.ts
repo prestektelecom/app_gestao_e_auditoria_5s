@@ -185,7 +185,7 @@ export const reviewChangeRequest = createServerFn({ method: "POST" })
 // Parâmetros do programa (public.settings)
 // ---------------------------------------------------------------------------
 const settingSchema = z.object({
-  key: z.enum(["audit_periodicity", "scoring", "medals", "deadline_alert_days"]),
+  key: z.enum(["audit_periodicity", "scoring", "medals", "deadline_alert_days", "nc_requirements"]),
   value: z.custom<Json>((v) => v !== undefined),
 });
 

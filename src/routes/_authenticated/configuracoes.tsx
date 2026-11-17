@@ -12,13 +12,14 @@ import { LoadingBlock, PageHeader, Panel, Restricted } from "@/components/app/ki
 import { Field } from "@/components/app/unit-sector-forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
       { title: "Configurações — Prestek 5S" },
-      { name: "description", content: "Periodicidade, pontuação e medalhas do Programa 5S." },
+      { name: "description", content: "Periodicidade, pontuação, medalhas e exigências das auditorias do Programa 5S." },
       { property: "og:title", content: "Configurações — Prestek 5S" },
       { property: "og:description", content: "Periodicidade, pontuação e medalhas do Programa 5S." },
       { property: "og:type", content: "website" },
@@ -134,7 +135,28 @@ function SettingsPage() {
         </Panel>
       </div>
 
-      <Panel label="d" title="Alertas de prazo">
+      <Panel label="d" title="Exigências em NC/NCP">
+        <div className="grid gap-3 sm:max-w-xl">
+          <p className="text-sm text-muted-foreground">
+            Na auditoria pelo QR Code, o que é obrigatório quando uma pergunta é marcada como Não Conforme ou Não Conforme Parcial.
+            Desligado, o auditor ainda pode adicionar, mas consegue finalizar sem.
+          </p>
+          {([["photo", "Exigir pelo menos 1 foto"], ["observation", "Exigir observação"]] as const).map(([k, l]) => (
+            <label key={k} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+              {l}
+              <Switch disabled={!editable} checked={s.nc_requirements[k]}
+                onCheckedChange={(v) => setS({ ...s, nc_requirements: { ...s.nc_requirements, [k]: v } })} />
+            </label>
+          ))}
+          {editable && (
+            <Button className="w-fit" disabled={busy === "nc_requirements"} onClick={() => save("nc_requirements", s.nc_requirements)}>
+              {busy === "nc_requirements" && <Loader2 className="size-4 animate-spin" />} Salvar
+            </Button>
+          )}
+        </div>
+      </Panel>
+
+      <Panel label="e" title="Alertas de prazo">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="w-full sm:w-64">
             <Field label="Dias antes do vencimento (Próxima do prazo)">

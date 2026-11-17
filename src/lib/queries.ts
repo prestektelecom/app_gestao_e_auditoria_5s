@@ -50,6 +50,8 @@ export type Settings = {
   scoring: { conforme: number; nc_parcial: number; nao_conforme: number; nao_se_aplica: "excluded" };
   medals: { gold_min: number; silver_min: number; bronze_min: number };
   deadline_alert_days: number;
+  /** NC/NCP na auditoria pelo QR Code: exigir foto e/ou observação para finalizar. */
+  nc_requirements: { photo: boolean; observation: boolean };
 };
 
 export const settingsQuery = queryOptions({
@@ -62,6 +64,7 @@ export const settingsQuery = queryOptions({
       scoring: (map.scoring as Settings["scoring"]) ?? { conforme: 100, nc_parcial: 50, nao_conforme: 0, nao_se_aplica: "excluded" },
       medals: (map.medals as Settings["medals"]) ?? { gold_min: 90, silver_min: 80, bronze_min: 70 },
       deadline_alert_days: Number(map.deadline_alert_days ?? 3) || 3,
+      nc_requirements: { photo: true, observation: true, ...(map.nc_requirements as Partial<Settings["nc_requirements"]> | undefined) },
     };
   },
 });

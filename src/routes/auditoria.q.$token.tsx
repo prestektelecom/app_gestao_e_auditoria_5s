@@ -50,7 +50,7 @@ type AuditData = {
   };
   answers: Answer[];
   evidences: Evidence[];
-  settings: { scoring: ScoringSettings; medals: MedalSettings };
+  settings: { scoring: ScoringSettings; medals: MedalSettings; nc_requirements?: { photo: boolean; observation: boolean } };
 };
 type Pending = { localId: string; answerId: string; preview: string; blob: Blob; source: "CAMERA" | "GALLERY"; progress: number; error?: string };
 type Stored = { auditId: string; session: string };
@@ -409,18 +409,21 @@ function AuditRunner({
   const answeredCount = answers.filter((a) => a.answer).length;
   const pct = answers.length ? Math.round((answeredCount / answers.length) * 100) : 0;
   const evCount = (id: string) => evidences.filter((e) => e.answer_id === id).length;
+  // Configuração do administrador: o que é obrigatório em NC/NCP (padrão: foto e observação).
+  const needPhoto = data.settings.nc_requirements?.photo ?? true;
+  const needObs = data.settings.nc_requirements?.observation ?? true;
   const issues = useMemo(() => {
     const list: { id: string; order: number; sense: string; msg: string }[] = [];
     for (const a of answers) {
       if (!a.answer) list.push({ id: a.id, order: a.order, sense: a.sense, msg: "sem resposta" });
       else if (requiresEvidence(a.answer)) {
         const tag = a.answer === "NON_COMPLIANT" ? "NC" : "NCP";
-        if (!a.observation?.trim()) list.push({ id: a.id, order: a.order, sense: a.sense, msg: `${tag} sem observação` });
-        if (!evidences.some((e) => e.answer_id === a.id)) list.push({ id: a.id, order: a.order, sense: a.sense, msg: `${tag} sem foto` });
+        if (needObs && !a.observation?.trim()) list.push({ id: a.id, order: a.order, sense: a.sense, msg: `${tag} sem observação` });
+        if (needPhoto && !evidences.some((e) => e.answer_id === a.id)) list.push({ id: a.id, order: a.order, sense: a.sense, msg: `${tag} sem foto` });
       }
     }
     return list;
-  }, [answers, evidences]);
+  }, [answers, evidences, needObs, needPhoto]);
   const prelim = computeScore(answers, data.settings.scoring, data.settings.medals);
   const counts = {
     C: answers.filter((a) => a.answer === "COMPLIANT").length,
@@ -530,6 +533,7 @@ function AuditRunner({
         const evs = evidences.filter((e) => e.answer_id === a.id);
         const pend = pending.filter((p) => p.answerId === a.id);
         const need = requiresEvidence(a.answer);
+        const obsRequired = need && needObs;
         return (
           <div key={a.id} id={`q-${a.id}`} className={cn("panel grid gap-3 p-4", need && "border-destructive/40")}>
             <p className="text-sm leading-relaxed"><span className="mr-1 font-mono text-xs text-muted-foreground">{String(a.order).padStart(2, "0")}.</span>{a.question}</p>
@@ -549,8 +553,8 @@ function AuditRunner({
             </div>
             {a.answer && (
               <>
-                <Textarea aria-label={need ? "Observação (obrigatória)" : "Observação (opcional)"} placeholder={need ? "Observação (obrigatória)" : "Observação (opcional)"} value={a.observation ?? ""} maxLength={2000}
-                  className={cn(need && !a.observation?.trim() && "border-destructive")}
+                <Textarea aria-label={obsRequired ? "Observação (obrigatória)" : "Observação (opcional)"} placeholder={obsRequired ? "Observação (obrigatória)" : "Observação (opcional)"} value={a.observation ?? ""} maxLength={2000}
+                  className={cn(obsRequired && !a.observation?.trim() && "border-destructive")}
                   onChange={(e) => setObservation(a.id, e.target.value)} />
                 {a.answer !== "NOT_APPLICABLE" && (
                   <div className="grid gap-2">
@@ -589,7 +593,7 @@ function AuditRunner({
                           onChange={(e) => { addFiles(a.id, e.target.files, "GALLERY"); e.target.value = ""; }} />
                       </label>
                     </div>
-                    {need && evCount(a.id) === 0 && <p className="text-xs text-destructive">Adicione pelo menos 1 foto.</p>}
+                    {need && needPhoto && evCount(a.id) === 0 && <p className="text-xs text-destructive">Adicione pelo menos 1 foto.</p>}
                   </div>
                 )}
               </>
