@@ -109,6 +109,37 @@ tail ~/deploy.log                   # últimas publicações e erros
 systemctl status gestao5s --no-pager
 ```
 
+### Página de manutenção
+
+Enquanto o app não responde (no reinício de uma publicação, ou se cair), o Apache mostra a
+página de [deploy/manutencao/](deploy/manutencao/) no lugar do "Service Unavailable" padrão. Ela
+mostra a etapa da publicação, quanto falta (pela duração da publicação anterior) e recarrega
+sozinha quando o app volta. O `scripts/deploy.sh` copia a página para a pasta do Apache e grava
+o andamento em `status.json` a cada etapa. Configuração, uma vez (com `sudo`):
+
+```sh
+# pasta servida pelo Apache, gravável pelo antonio (o deploy escreve nela)
+sudo mkdir -p /var/www/gestao5s-manutencao
+sudo chown antonio:antonio /var/www/gestao5s-manutencao
+cp /home/antonio/app_gestao-e-auditoria-5s/deploy/manutencao/* /var/www/gestao5s-manutencao/
+```
+
+No `<VirtualHost>` do app, **antes** do `ProxyPass /`:
+
+```apache
+Alias /manutencao /var/www/gestao5s-manutencao
+<Directory /var/www/gestao5s-manutencao>
+    Require all granted
+</Directory>
+ProxyPass /manutencao !
+ErrorDocument 502 /manutencao/index.html
+ErrorDocument 503 /manutencao/index.html
+```
+
+Depois `sudo apache2ctl configtest && sudo systemctl reload apache2`. Para ver a página sem
+derrubar o app: abra `https://<endereço>/manutencao/`. Outra pasta: defina `MAINT_DIR` para o
+deploy.
+
 ## Migração a partir do Supabase (Lovable)
 
 O backup do Supabase (`pg_dump` em formato custom, ex. `database/gestao-e-auditoria-5s_261105.backup`)

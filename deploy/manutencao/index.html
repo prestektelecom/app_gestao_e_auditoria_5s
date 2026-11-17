@@ -1,0 +1,247 @@
+<!doctype html>
+<!--
+  Página de manutenção do Prestek 5S. O Apache a mostra (ErrorDocument 503) quando o app
+  está fora do ar, por exemplo no reinício de uma publicação. Fica fora do app de propósito:
+  precisa funcionar justamente quando o node não responde. Veja o README, "Página de manutenção".
+
+  Lê /manutencao/status.json (gravado pelo scripts/deploy.sh) para mostrar a etapa e a
+  previsão, e confere a cada 5 s se o app voltou; quando volta, recarrega a página.
+  Todos os caminhos são absolutos: a página aparece no endereço que a pessoa abriu.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Atualizando o sistema — Prestek 5S</title>
+<link rel="icon" href="/manutencao/logo.png">
+<style>
+  :root {
+    --navy: #16357a;
+    --navy-ink: #0f2557;
+    --orange: #ef7d1a;
+    --bg: #f3f6fb;
+    --card: #ffffff;
+    --text: #1b2433;
+    --muted: #5d6b82;
+    --line: #dfe5ef;
+    --ok: #1f9d55;
+    --bad: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1426;
+      --card: #131e36;
+      --text: #e8edf6;
+      --muted: #9aa8c2;
+      --line: #24324f;
+      --navy: #8fb0ff;
+      --navy-ink: #c9d8ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background:
+      radial-gradient(60rem 30rem at 110% -10%, color-mix(in srgb, var(--orange) 14%, transparent), transparent 60%),
+      radial-gradient(50rem 30rem at -10% 110%, color-mix(in srgb, var(--navy) 14%, transparent), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 460px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 28px 26px;
+    box-shadow: 0 20px 50px -24px rgba(15, 37, 87, .35);
+    text-align: center;
+  }
+  .logo { width: 132px; height: auto; display: block; margin: 0 auto 8px; border-radius: 12px; }
+  h1 { margin: 10px 0 6px; font-size: 1.45rem; line-height: 1.25; color: var(--navy-ink); letter-spacing: -.01em; }
+  .lead { margin: 0 auto; color: var(--muted); max-width: 34ch; }
+
+  /* Previsão */
+  .eta {
+    margin: 22px 0 6px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--navy) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--navy) 18%, transparent);
+  }
+  .eta-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .eta-value { font-size: 1.9rem; font-weight: 700; color: var(--navy-ink); font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .eta-sub { font-size: .85rem; color: var(--muted); }
+
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 14px 0 4px; }
+  .bar > span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--navy), var(--orange)); transition: width .8s ease; }
+  .bar.indeterminate > span { width: 35%; animation: slide 1.4s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
+  /* Etapas */
+  ol { list-style: none; padding: 0; margin: 18px 0 0; text-align: left; display: grid; gap: 2px; }
+  li { display: flex; align-items: center; gap: 10px; padding: 7px 4px; font-size: .93rem; color: var(--muted); }
+  .dot { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  li.done { color: var(--text); }
+  li.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+  li.now { color: var(--text); font-weight: 600; }
+  li.now .dot { border-color: var(--orange); border-top-color: transparent; animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .check { margin-top: 20px; font-size: .85rem; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  button {
+    margin-top: 14px; font: inherit; font-weight: 600; color: #fff; background: var(--navy);
+    border: 0; border-radius: 12px; padding: 11px 20px; min-height: 44px; cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) { button { background: #2a56c6; } }
+  button:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+  .back { color: var(--ok); font-weight: 600; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/manutencao/logo.png" alt="Prestek Telecom" width="132" height="132">
+  <h1 id="title">Estamos atualizando o sistema</h1>
+  <p class="lead" id="lead">Uma nova versão do Prestek 5S está sendo instalada. Já voltamos — esta página recarrega sozinha.</p>
+
+  <section class="eta" aria-live="polite">
+    <div class="eta-label" id="eta-label">Previsão para voltar</div>
+    <div class="eta-value" id="eta-value">em instantes</div>
+    <div class="eta-sub" id="eta-sub"></div>
+    <div class="bar indeterminate" id="bar"><span></span></div>
+  </section>
+
+  <ol id="steps" hidden></ol>
+
+  <div class="check" id="check"><span class="pulse"></span><span id="check-text">Verificando se o sistema voltou…</span></div>
+  <button type="button" id="retry">Tentar agora</button>
+</main>
+
+<script>
+(function () {
+  var STEPS = ["Preparando a nova versão", "Conferindo o código", "Atualizando o banco de dados", "Gerando o sistema", "Reiniciando"];
+  var CHECK_EVERY = 5; // segundos
+  var status = null, fetchedAt = 0, nextCheck = CHECK_EVERY;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function fmtTime(epoch) {
+    return new Date(epoch * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function render() {
+    var now = Date.now() / 1000;
+    var running = status && status.state === "running" && now - status.started_at < 45 * 60;
+    var steps = $("steps"), bar = $("bar");
+
+    if (!running) {
+      // Sem publicação em andamento: o app caiu por outro motivo ou está reiniciando.
+      steps.hidden = true;
+      bar.className = "bar indeterminate";
+      $("title").textContent = "Sistema temporariamente indisponível";
+      $("lead").textContent = "Estamos trabalhando para normalizar o acesso. Esta página recarrega sozinha assim que o sistema voltar.";
+      $("eta-label").textContent = "Previsão para voltar";
+      $("eta-value").textContent = "em instantes";
+      $("eta-sub").textContent = "";
+      return;
+    }
+
+    $("title").textContent = "Estamos atualizando o sistema";
+    $("lead").textContent = "Uma nova versão do Prestek 5S está sendo instalada. Já voltamos — esta página recarrega sozinha.";
+    var elapsed = now - status.started_at;
+    var total = status.estimate_seconds || 0;
+    if (total > 0) {
+      var left = total - elapsed;
+      bar.className = "bar";
+      bar.firstElementChild.style.width = Math.min(97, Math.max(4, (elapsed / total) * 100)) + "%";
+      if (left > 0) {
+        $("eta-label").textContent = "Tempo estimado restante";
+        $("eta-value").textContent = fmtClock(left);
+        $("eta-sub").textContent = "Começou às " + fmtTime(status.started_at) + " · previsão de término às " + fmtTime(status.started_at + total);
+      } else {
+        $("eta-label").textContent = "Quase pronto";
+        $("eta-value").textContent = "finalizando…";
+        $("eta-sub").textContent = "Está levando um pouco mais que o normal. Começou às " + fmtTime(status.started_at) + ".";
+      }
+    } else {
+      bar.className = "bar indeterminate";
+      $("eta-label").textContent = "Atualização em andamento";
+      $("eta-value").textContent = fmtClock(elapsed);
+      $("eta-sub").textContent = "Começou às " + fmtTime(status.started_at);
+    }
+
+    var cur = Math.min(Math.max(status.step || 1, 1), STEPS.length);
+    steps.hidden = false;
+    steps.innerHTML = "";
+    STEPS.forEach(function (label, i) {
+      var li = document.createElement("li");
+      var n = i + 1;
+      li.className = n < cur ? "done" : n === cur ? "now" : "";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.textContent = n < cur ? "✓" : "";
+      li.appendChild(dot);
+      li.appendChild(document.createTextNode(label));
+      if (n === cur) li.setAttribute("aria-current", "step");
+      steps.appendChild(li);
+    });
+  }
+
+  function loadStatus() {
+    return fetch("/manutencao/status.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { status = j; fetchedAt = Date.now(); render(); })
+      .catch(function () { status = null; render(); });
+  }
+
+  // O app voltou quando "/" responde sem erro 5xx (um redirecionamento para o login também conta).
+  function checkApp() {
+    $("check-text").textContent = "Verificando se o sistema voltou…";
+    return fetch("/?t=" + Date.now(), { method: "GET", cache: "no-store", redirect: "manual" })
+      .then(function (r) {
+        if (r.type === "opaqueredirect" || (r.status > 0 && r.status < 500)) {
+          $("check").innerHTML = '<span class="back">✓ O sistema voltou! Recarregando…</span>';
+          setTimeout(function () { location.reload(); }, 800);
+          return true;
+        }
+        return false;
+      })
+      .catch(function () { return false; });
+  }
+
+  function tick() {
+    nextCheck -= 1;
+    if (nextCheck <= 0) {
+      nextCheck = CHECK_EVERY;
+      checkApp().then(function (up) { if (!up) loadStatus(); });
+    } else {
+      $("check-text").textContent = "Nova verificação em " + nextCheck + " s";
+      render();
+    }
+  }
+
+  $("retry").addEventListener("click", function () {
+    nextCheck = CHECK_EVERY;
+    checkApp().then(function (up) { if (!up) loadStatus(); });
+  });
+
+  loadStatus();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

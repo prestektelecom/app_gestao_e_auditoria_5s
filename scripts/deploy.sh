@@ -50,17 +50,49 @@ with_service_env() {
   )
 }
 
+# Página de manutenção (deploy/manutencao): o Apache a mostra enquanto o app não responde.
+# Se a pasta servida pelo Apache existir e for gravável, copia a página para lá e grava em
+# status.json a etapa atual, o início e a duração da última publicação (a previsão da página).
+# Sem a pasta, nada disso acontece e o deploy segue igual. Veja o README, "Página de manutenção".
+MAINT_DIR="${MAINT_DIR:-/var/www/gestao5s-manutencao}"
+DEPLOY_START=$(date +%s)
+maint_ok() { [ -d "$MAINT_DIR" ] && [ -w "$MAINT_DIR" ]; }
+LAST_DURATION=$(cat "$MAINT_DIR/last_duration" 2>/dev/null || true)
+case "$LAST_DURATION" in "" | *[!0-9]*) LAST_DURATION=0 ;; esac
+deploy_status() { # deploy_status <etapa 1-5> <running|done|failed>
+  maint_ok || return 0
+  printf '{"state":"%s","step":%s,"started_at":%s,"estimate_seconds":%s}\n' \
+    "$2" "$1" "$DEPLOY_START" "$LAST_DURATION" > "$MAINT_DIR/status.json.tmp" \
+    && mv -f "$MAINT_DIR/status.json.tmp" "$MAINT_DIR/status.json" || true
+}
+on_exit() {
+  local rc=$?
+  if [ "$rc" -eq 0 ]; then
+    deploy_status 5 done
+    if maint_ok; then echo $(($(date +%s) - DEPLOY_START)) > "$MAINT_DIR/last_duration" || true; fi
+  else
+    deploy_status 0 failed
+  fi
+}
+trap on_exit EXIT
+if maint_ok; then cp -f deploy/manutencao/index.html deploy/manutencao/logo.png "$MAINT_DIR"/ || true; fi
+
 echo "==> Versão: $(git log --oneline -1)"
 echo "==> Instalando dependências"
+deploy_status 1 running
 npm ci --no-audit --no-fund
 echo "==> Conferindo o código e rodando os testes"
+deploy_status 2 running
 npx tsc --noEmit
 npm test
 echo "==> Atualizando o banco (só aplica o que falta)"
+deploy_status 3 running
 with_service_env npm run db:setup
 echo "==> Gerando a nova versão"
+deploy_status 4 running
 npm run build
 echo "==> Reiniciando o app"
+deploy_status 5 running
 if [ -n "$SYSTEMD_UNIT" ]; then
   sudo -n systemctl restart "$SYSTEMD_UNIT"
   sleep 3
