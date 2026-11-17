@@ -13,7 +13,7 @@ export type UserRow = {
   id: string; name: string; email: string; system_access: boolean; active: boolean; created_at: string; updated_at: string; role: Role | null;
 };
 export type Auditor = {
-  id: string; user_id: string | null; name: string; cpf: string; admission_date: string | null; job_title: string | null;
+  id: string; user_id: string | null; name: string; cpf: string | null; admission_date: string | null; job_title: string | null;
   unit_id: string; sector_id: string; authorized: boolean; active: boolean; created_at: string; updated_at: string;
 };
 

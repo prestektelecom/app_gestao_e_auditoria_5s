@@ -70,10 +70,17 @@ describe.skipIf(!hasTestDb)("fluxos de QR, manutenção e notificações", () =>
     // O código do CPF não vale mais: só e-mail e senha do login.
     const bad = (await qrLogic.validateAuditor(req, qrToken, AUD_EMAIL, CPF.slice(0, 6))) as Json;
     expect(bad).toMatchObject({ ok: false, error: "E-mail ou senha inválidos." });
-    // Senha certa, mas o usuário não está ligado a nenhum auditor.
-    const notAuditor = (await qrLogic.validateAuditor(req, qrToken, "admin@teste.com", "senha-de-teste-1")) as Json;
+    // Senha certa, mas o usuário (não administrador) não está ligado a nenhum auditor.
+    await db.asService((tx) => makeUser(tx, { email: "gestor@teste.com", role: "manager" }));
+    const notAuditor = (await qrLogic.validateAuditor(req, qrToken, "gestor@teste.com", "senha-de-teste-1")) as Json;
     expect(notAuditor.ok).toBe(false);
     expect(String(notAuditor.error)).toContain("não está ligado a um auditor");
+    // Administrador sem cadastro de auditor: o auditor é criado na hora (sem CPF) e ele pode auditar.
+    const adm = (await qrLogic.validateAuditor(req, qrToken, "admin@teste.com", "senha-de-teste-1")) as Json;
+    expect(adm).toMatchObject({ ok: true, auditor_name: "admin@teste.com" });
+    const [admAud] = await db.asService((tx) => tx<{ cpf: string | null; sector_id: string }[]>`
+      select cpf, sector_id from public.auditors where user_id = ${adminId}`);
+    expect(admAud).toEqual({ cpf: null, sector_id: sectorId });
     const v = (await qrLogic.validateAuditor(req, qrToken, AUD_EMAIL.toUpperCase(), AUD_PASSWORD)) as Json;
     expect(v).toMatchObject({ ok: true, auditor_name: "Auditor QR" });
 

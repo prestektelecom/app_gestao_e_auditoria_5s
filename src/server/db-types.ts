@@ -276,7 +276,7 @@ export type Database = {
           active: boolean
           admission_date: string | null
           authorized: boolean
-          cpf: string
+          cpf: string | null
           created_at: string
           custom_pin_hash: string | null
           id: string
@@ -291,7 +291,7 @@ export type Database = {
           active?: boolean
           admission_date?: string | null
           authorized?: boolean
-          cpf: string
+          cpf: string | null
           created_at?: string
           custom_pin_hash?: string | null
           id?: string
@@ -306,7 +306,7 @@ export type Database = {
           active?: boolean
           admission_date?: string | null
           authorized?: boolean
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           custom_pin_hash?: string | null
           id?: string

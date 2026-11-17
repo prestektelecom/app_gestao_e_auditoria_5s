@@ -113,7 +113,7 @@ export function AuditorDialog({
     if (!open) return;
     setErrors({});
     setF(auditor ? {
-      name: auditor.name, cpf: maskCpf(auditor.cpf), admission_date: auditor.admission_date ?? "", job_title: auditor.job_title ?? "",
+      name: auditor.name, cpf: maskCpf(auditor.cpf ?? ""), admission_date: auditor.admission_date ?? "", job_title: auditor.job_title ?? "",
       unit_id: auditor.unit_id, sector_id: auditor.sector_id, user_id: auditor.user_id ?? "", system_access: !!auditor.user_id,
       authorized: auditor.authorized, active: auditor.active,
     } : empty);
@@ -128,8 +128,9 @@ export function AuditorDialog({
     const e: Record<string, string> = {};
     const cpf = onlyDigits(f.cpf);
     if (f.name.trim().length < 2) e.name = "Nome completo é obrigatório.";
-    if (!isValidCpf(cpf)) e.cpf = "CPF inválido.";
-    else if (auditors.some((a) => a.cpf === cpf && a.id !== auditor?.id)) e.cpf = "Este CPF já está cadastrado.";
+    // CPF opcional (não é mais usado para entrar no QR Code); se informado, precisa ser válido.
+    if (cpf && !isValidCpf(cpf)) e.cpf = "CPF inválido.";
+    else if (cpf && auditors.some((a) => a.cpf === cpf && a.id !== auditor?.id)) e.cpf = "Este CPF já está cadastrado.";
     if (!f.unit_id) e.unit_id = "Selecione a unidade.";
     if (!f.sector_id) e.sector_id = "Selecione o setor.";
     else if (!sectors.some((s) => s.id === f.sector_id && s.unit_id === f.unit_id)) e.sector_id = "O setor não pertence à unidade selecionada.";
@@ -139,7 +140,7 @@ export function AuditorDialog({
 
     setBusy(true);
     const payload = {
-      name: f.name.trim(), cpf, admission_date: f.admission_date || null, job_title: f.job_title.trim() || null,
+      name: f.name.trim(), cpf: cpf || null, admission_date: f.admission_date || null, job_title: f.job_title.trim() || null,
       unit_id: f.unit_id, sector_id: f.sector_id, user_id: f.system_access ? f.user_id : null,
       authorized: f.authorized, active: f.active,
     };
@@ -165,7 +166,7 @@ export function AuditorDialog({
               <Input id="a-name" value={f.name} maxLength={120} onChange={(e) => setF({ ...f, name: e.target.value })} />
             </Field>
           </div>
-          <Field label="CPF *" error={errors.cpf} htmlFor="a-cpf">
+          <Field label="CPF" error={errors.cpf} htmlFor="a-cpf">
             <Input id="a-cpf" inputMode="numeric" placeholder="000.000.000-00" autoComplete="off" value={f.cpf}
               onChange={(e) => setF({ ...f, cpf: maskCpf(e.target.value) })} />
           </Field>

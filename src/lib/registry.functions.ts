@@ -136,7 +136,7 @@ export const setActive = createServerFn({ method: "POST" })
 const auditorSchema = z.object({
   id: uuid.optional(),
   name: z.string().trim().min(2).max(120),
-  cpf: z.string().regex(/^\d{11}$/),
+  cpf: z.string().regex(/^\d{11}$/).nullable(),
   admission_date: z.string().nullable(),
   job_title: z.string().trim().max(120).nullable(),
   unit_id: uuid,

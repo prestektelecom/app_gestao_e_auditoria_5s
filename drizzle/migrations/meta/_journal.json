@@ -64,6 +64,13 @@
       "when": 1794918358719,
       "tag": "0008_qr_login_password",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794919173034,
+      "tag": "0009_admin_can_audit",
+      "breakpoints": true
     }
   ]
 }

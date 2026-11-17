@@ -9,8 +9,9 @@ export function maskCpf(value: string) {
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
 }
 
-/** Listing mask: never reveals the first 6 digits (future audit code). */
-export function maskCpfHidden(cpf: string) {
+/** Listing mask: never reveals the first 6 digits. Auditor without CPF shows a dash. */
+export function maskCpfHidden(cpf: string | null) {
+  if (!cpf) return "—";
   const d = onlyDigits(cpf);
   if (d.length !== 11) return "***.***.***-**";
   return `***.***.${d.slice(6, 9)}-${d.slice(9)}`;

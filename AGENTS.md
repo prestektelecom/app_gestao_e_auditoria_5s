@@ -23,7 +23,7 @@
 - Audits are the exception, and only an admin can delete one (`audits.delete`, history screen): `admin_delete_audit` (security definer, checks `is_admin`) removes the audit and its answers, evidences, 5W2H plans, change logs and the plan notifications in FK order (all `on delete restrict`), leaves a row in `audit_deletion_logs`, and returns the photo paths; `deleteAuditCore` removes those files only after the transaction commits.
 - Auditor `custom_pin_hash` is not client-readable (column grants); PINs are set via `set_auditor_pin` RPC (bcrypt) — protects auth codes.
 - CPF stored as 11-digit text with DB validation; listings show `maskCpfHidden` (first 6 digits hidden).
-- QR audit flow: the auditor signs in with the e-mail and password of the linked user (`auditors.user_id`), checked server-side with the login rate limit, then `qr_issue_ticket` (service-only) issues the ticket. The old CPF/PIN code (`qr_validate_auditor`) was dropped in migration 0008.
+- QR audit flow: the auditor signs in with the e-mail and password of the linked user (`auditors.user_id`), checked server-side with the login rate limit, then `qr_issue_ticket` (service-only) issues the ticket. The old CPF/PIN code (`qr_validate_auditor`) was dropped in migration 0008. Admins can always audit: if an admin has no auditor row, `qr_issue_ticket` creates one (no CPF; CPF is optional since 0009).
 - Sector `qr_token` is random and immutable (trigger) — QR codes survive renames.
 - Program parameters live in `public.settings` (key/jsonb) and are read via `settingsQuery` — never hardcode periodicity/scoring/medals.
 - Sector belongs to unit is enforced by composite FK `(sector_id, unit_id)` on auditors.
